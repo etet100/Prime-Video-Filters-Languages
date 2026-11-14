@@ -18,16 +18,19 @@ The extension is a single content script (`content.js` + `content.css`), with no
 
 ## Requests and cache
 
-- Requests are made only for cards that are on the screen or within 200 px of it, at most 3 at a time. When a filter needs a card's data (the audio or subtitles filter, or the "included only" filter for cards whose status is not in the DOM), cards up to one screen height above and below are checked too, with the cards on the screen first. Hidden cards make the next ones move up (except in long grids, where they leave empty slots), so they are checked in turn. Titles that scroll away or leave the page before their request starts are dropped from the queue.
+- Requests are made only for cards that are on the screen or within 200 px of it, at most 3 at a time. When a filter needs a card's data (the audio or subtitles filter, or the "included only" filter for cards whose status is not in the DOM), cards up to one screen height above and below are checked too, with the cards on the screen first. Hidden cards make the next ones move up (except in long grids, where they leave empty slots, and with "grey out instead of hiding" on, where they stay in place), so they are checked in turn. Titles that scroll away or leave the page before their request starts are dropped from the queue.
 - **Cache**: each title is fetched at most once every 14 days. The result (audio list, subtitle list, subscription status, time) is kept in the extension's storage (`chrome.storage.local`, keys `audio:<detail id>`), shared by all Prime Video tabs. Expired entries, and entries saved before subtitles were added, are deleted when a page loads. Removing the extension clears the cache.
 
 ## What is added to the page
 
 - Everything the extension adds carries its icon, so it is clear what is not Prime Video's own: the panel has the icon and the name in its header and a blue border, and the badges (including the large ones on a title's page) sit in a dark frame with the icon on the left, separated from them by a thin line. The icon is embedded in `content.css` as a data URI, so the extension needs no `web_accessible_resources`.
 - **Filters**: while a filter is on, a card that is not checked yet is dimmed until it is either hidden or shown normally. In long grids that Prime Video loads in parts (such as "Więcej do odkrycia" in search), a hidden card leaves an empty slot instead of the next cards moving up, otherwise the grid would scroll into an empty screen. The banner at the top is never hidden, and a carousel whose cards are all hidden stays on the page, empty.
+- **Grey out instead of hiding**: with this setting on, a card that fails a filter is not hidden but stays in place, grey and faded (unlike a card not checked yet, which keeps its colours), while its badges keep their colours; hovering over it shows it normally. The panel's "hidden" count includes these cards.
 - **Language picker**: it sets both the language looked for in audio and subtitles and the language of the panel and badges. Until the user picks one, the browser's language is used if it is on the list, otherwise English.
 - **Simplified view**: every badge becomes a small coloured square with an icon only: a padlock for the subscription (open when included, closed when not), a speaker for audio, "CC" for subtitles. Green means yes, red means no, grey means not known yet.
-- The filter, language and simplified view settings are remembered.
+- **While a video plays**, the panel is hidden (the player opens on top of the page, whose cards stay in the DOM), and it comes back when the player is closed.
+- **Collapsing the panel**: the minus button in the panel header shrinks the panel to a small square with the extension's icon; a click on the icon expands it again. The filters keep working while the panel is collapsed, but its hidden count and its warning are not visible.
+- The filter, language, grey out, simplified view and collapsed panel settings are remembered.
 
 ## When Prime Video changes
 

@@ -98,6 +98,9 @@
       filterSubtitles: (c) => `Tylko z napisami ${c}`,
       language: 'Język panelu',
       compact: 'Pokazuj tylko ikony',
+      dim: 'Wyszarzaj zamiast ukrywać',
+      collapse: 'Zwiń panel',
+      expand: 'Rozwiń panel',
       hidden: 'Ukryte',
       checking: 'sprawdzanie',
       warnRequests: 'Sprawdzanie często zawodzi - Prime Video jest niedostępne albo się zmieniło',
@@ -116,6 +119,9 @@
       filterSubtitles: (c) => `Only with ${c} subtitles`,
       language: 'Panel language',
       compact: 'Show icons only',
+      dim: 'Grey out instead of hiding',
+      collapse: 'Collapse panel',
+      expand: 'Expand panel',
       hidden: 'Hidden',
       checking: 'checking',
       warnRequests: 'Checks keep failing - Prime Video is unreachable or has changed',
@@ -134,6 +140,9 @@
       filterSubtitles: (c) => `Nur mit ${c}-Untertiteln`,
       language: 'Sprache des Panels',
       compact: 'Nur Symbole anzeigen',
+      dim: 'Ausgrauen statt ausblenden',
+      collapse: 'Panel einklappen',
+      expand: 'Panel ausklappen',
       hidden: 'Ausgeblendet',
       checking: 'Prüfung',
       warnRequests: 'Prüfungen schlagen oft fehl - Prime Video ist nicht erreichbar oder wurde geändert',
@@ -152,6 +161,9 @@
       filterSubtitles: (c) => `Solo con subtítulos ${c}`,
       language: 'Idioma del panel',
       compact: 'Mostrar solo iconos',
+      dim: 'Atenuar en vez de ocultar',
+      collapse: 'Contraer el panel',
+      expand: 'Expandir el panel',
       hidden: 'Ocultos',
       checking: 'comprobando',
       warnRequests: 'Las comprobaciones fallan a menudo - Prime Video no responde o ha cambiado',
@@ -170,6 +182,9 @@
       filterSubtitles: (c) => `Seulement avec sous-titres ${c}`,
       language: 'Langue du panneau',
       compact: 'Afficher uniquement les icônes',
+      dim: 'Griser au lieu de masquer',
+      collapse: 'Réduire le panneau',
+      expand: 'Développer le panneau',
       hidden: 'Masqués',
       checking: 'vérification',
       warnRequests: 'Les vérifications échouent souvent - Prime Video est inaccessible ou a changé',
@@ -188,6 +203,9 @@
       filterSubtitles: (c) => `Solo con sottotitoli ${c}`,
       language: 'Lingua del pannello',
       compact: 'Mostra solo le icone',
+      dim: 'In grigio invece di nascondere',
+      collapse: 'Comprimi il pannello',
+      expand: 'Espandi il pannello',
       hidden: 'Nascosti',
       checking: 'verifica',
       warnRequests: 'I controlli falliscono spesso - Prime Video non è raggiungibile o è cambiato',
@@ -206,6 +224,9 @@
       filterSubtitles: (c) => `Jen s ${c} titulky`,
       language: 'Jazyk panelu',
       compact: 'Zobrazovat jen ikony',
+      dim: 'Zašednout místo skrytí',
+      collapse: 'Sbalit panel',
+      expand: 'Rozbalit panel',
       hidden: 'Skryto',
       checking: 'kontrola',
       warnRequests: 'Kontroly často selhávají - Prime Video je nedostupné nebo se změnilo',
@@ -278,6 +299,8 @@
     return {
       language: TRACK_LANGUAGES[saved.language] ? saved.language : browserLanguage(),
       compact: !!saved.compact,
+      dim: !!saved.dim,
+      collapsed: !!saved.collapsed,
     };
   }
 
@@ -506,7 +529,8 @@
   // the cards on or near the screen, then - only when a filter needs their data - the
   // cards within one screen of it. Each group is in page order. With a filter on, hidden
   // cards make the next ones move up into these zones, so they get checked in turn
-  // (except in virtualized grids, where hidden cards leave empty slots).
+  // (except in virtualized grids, where hidden cards leave empty slots, and with the
+  // grey out setting, where failing cards stay in place).
   function rebuildQueue(pageId, cards) {
     const wanted = new Set();
     if (pageId) {
@@ -633,9 +657,17 @@
       // A card the filters cannot decide on yet is dimmed until its check finishes.
       // A failed check counts as finished, so the card does not stay dimmed.
       const unchecked = !hidden && filtersNeedDetail(info) && !getEntry(id) && pending.get(id) !== 'error';
+      // With the grey out setting on, a failing card stays in place, greyed out, instead of being hidden.
+      const dimmed = hidden && settings.dim;
+      const removed = hidden && !settings.dim;
       const virtual = isVirtualGrid(card);
-      setClass(getHideTarget(card), 'apbs-hidden', hidden && !virtual);
-      setClass(card, 'apbs-empty-slot', hidden && virtual);
+      setClass(getHideTarget(card), 'apbs-hidden', removed && !virtual);
+      setClass(card, 'apbs-empty-slot', removed && virtual);
+      // A data attribute, not a class: Prime Video rewrites the card's class attribute when
+      // the pointer enters and leaves it, which would drop a class until the next update.
+      if (card.hasAttribute('data-apbs-dimmed') !== dimmed) {
+        card.toggleAttribute('data-apbs-dimmed', dimmed);
+      }
       setClass(card, 'apbs-unchecked', unchecked);
     }
   }
@@ -763,11 +795,16 @@
     }
     panel = document.createElement('div');
     panel.className = 'apbs-panel';
+    panel.classList.toggle('apbs-collapsed', settings.collapsed);
     const code = TRACK_LANGUAGES[settings.language].code;
     const title = document.createElement('div');
     title.className = 'apbs-title';
-    title.textContent = 'Prime Video Filters & Languages';
+    const name = document.createElement('span');
+    name.textContent = 'Prime Video Filters & Languages';
+    title.append(name, createPanelButton('apbs-collapse', texts.collapse, true));
     panel.append(
+      // Collapsed, the panel shows only this button: the extension's icon.
+      createPanelButton('apbs-expand', texts.expand, false),
       title,
       createLanguageSelect(),
       createCheckbox('entitled', texts.filterEntitled),
@@ -779,10 +816,25 @@
     warning.hidden = true;
     const status = document.createElement('div');
     status.className = 'apbs-status';
-    // The least important setting goes last, below a separator line, with the icons' legend under it.
+    // The least important settings go last, below a separator line, with the icons' legend under them.
     const legend = createLegend(code);
-    panel.append(warning, status, createCompactCheckbox(legend), legend);
+    panel.append(warning, status, createDimCheckbox(), createCompactCheckbox(legend), legend);
     document.body.append(panel);
+  }
+
+  // A button that collapses the panel to the extension's icon or expands it again; the state is remembered.
+  function createPanelButton(className, text, collapse) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = className;
+    button.title = text;
+    button.setAttribute('aria-label', text);
+    button.addEventListener('click', () => {
+      settings = { ...settings, collapsed: collapse };
+      saveSettings();
+      panel.classList.toggle('apbs-collapsed', collapse);
+    });
+    return button;
   }
 
   // What each icon of the simplified view means, shown only while that view is on.
@@ -819,10 +871,25 @@
     return label;
   }
 
+  // The grey out switch: cards that fail a filter stay on the page, greyed out, instead of being hidden.
+  function createDimCheckbox() {
+    const label = document.createElement('label');
+    label.className = 'apbs-separated';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = settings.dim;
+    input.addEventListener('change', () => {
+      settings = { ...settings, dim: input.checked };
+      saveSettings();
+      scheduleUpdate();
+    });
+    label.append(input, document.createTextNode(texts.dim));
+    return label;
+  }
+
   // The simplified view switch: icons only, without texts or the language code.
   function createCompactCheckbox(legend) {
     const label = document.createElement('label');
-    label.className = 'apbs-separated';
     const input = document.createElement('input');
     input.type = 'checkbox';
     input.checked = settings.compact;
@@ -889,7 +956,8 @@
     if (!status) {
       return;
     }
-    const hiddenCount = document.querySelectorAll('.apbs-hidden, .apbs-empty-slot').length;
+    // Greyed out cards are counted as hidden too (agreed: the same text in both modes).
+    const hiddenCount = document.querySelectorAll('.apbs-hidden, .apbs-empty-slot, [data-apbs-dimmed]').length;
     const waiting = queue.length + runningRequests;
     let text = `${texts.hidden}: ${hiddenCount}`;
     if (waiting > 0) {

@@ -24,6 +24,14 @@ A panel in the bottom-right corner hides what you do not want to see: titles out
 
 ![The filter panel (Polish interface) with two filters on and the cards that do not match hidden](images/filters.png)
 
+Would you rather keep them in sight? The **"grey out instead of hiding"** switch leaves the non-matching titles in place, grey and faded, with their badges still in colour; hover over one to see it normally.
+
+![Search results with the non-matching titles greyed out and their badges still in colour](images/grey-out.png)
+
+When the panel is in the way, the **minus button** in its header collapses it to a small icon in the corner; click the icon to bring the panel back. The filters keep working while it is collapsed. While a video is playing, the panel steps aside on its own.
+
+![The expanded panel with the minus button in its header](images/panel-collapse-button.png) ![The collapsed panel: just the extension's icon in the corner](images/panel-collapsed.png)
+
 ### Your language
 
 Pick **EN, PL, DE, ES, FR, IT or CS**. It sets the language looked for in audio and subtitles and the language of the panel and badges. Until you pick one, your browser's language is used if it is on the list, otherwise English.
@@ -42,7 +50,7 @@ On a title's own page the same three checks appear as a large banner above the t
 
 ![The banner above the title art on a detail page](images/detail-banner.png)
 
-Your settings (filters, language, simplified view) are remembered.
+Your settings (filters, language, grey out, simplified view, collapsed panel) are remembered.
 
 ## Installation
 

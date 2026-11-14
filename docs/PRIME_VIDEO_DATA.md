@@ -63,6 +63,8 @@ Counts are for the initial load. More rows load while scrolling.
 
 Identical to the search page cards above: `data-card-entitlement`, a `/detail/` link and a `packshot`. Very few lack `data-card-entitlement` (1 of 52 on the collection page). Prime Video's own labels (`[data-testid="metadata-badge"]`, e.g. "NOWY FILM", "WKRÓTCE ZNIKNIE") sit in the **top-right** corner of the packshot.
 
+On hover a card expands in place: the details panel (`[data-testid="standard-mini-details"]`, with the play, watchlist and hide buttons) is rendered **inside** the `<article>`. When the pointer enters and leaves, React rewrites the article's whole `class` attribute, dropping any class added to it; added `data-*` attributes survive.
+
 ### Super carousel card
 
 Tall posters, each alone in an `<li>` of a `card-container-list`:
@@ -98,6 +100,17 @@ The rotating banner at the top. All its cards are in the DOM at once, absolutely
 ```
 
 Use `image-link` for the detail id: the play button can link to a different id.
+
+## Video player
+
+The player opens on top of the page it was started from (the URL does not change), so the cards of that page stay in the DOM behind it. It lives in `div#dv-web-player`, which is always in the page:
+
+```html
+<div id="dv-web-player" class="dv-player-fullscreen">   <!-- open: position: fixed, z-index 9999, whole window -->
+<div id="dv-web-player" class="">                       <!-- closed: display: none -->
+```
+
+The extension hides its panel while `#dv-web-player.dv-player-fullscreen` exists (a CSS `:has()` rule in `content.css`).
 
 ## Hydration data (`script#dv-web-page-hydration-data`)
 

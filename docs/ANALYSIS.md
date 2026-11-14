@@ -105,6 +105,10 @@ The user reported that with a filter on, the "Więcej do odkrycia" grid on the s
 - At card position ~510 with the audio filter on, 30 of the 70 cards were hidden: the rendered window shrank to a few rows, and the screen below it was empty down to the footer. The spacers still assumed full rows. Hiding cards with `display: none` cannot work with this.
 - Logging the marker while scrolling to the end of the Rambo grid (357 titles): it disappeared after a few loads, well before the end, while one spacer always stayed above 0.
 
+## Video player (2026-11-14)
+
+The user reported that the panel covered the playing video. On a detail page, before and after pressing "Wznów", an `eval` read the class, computed `display`, `position` and `z-index` of `#dv-web-player` and which `<video>` elements it contained: closed, it had no class and `display: none`; open, it had `dv-player-fullscreen`, `position: fixed`, `z-index: 9999`, the size of the window, and the playing `<video>`. Closing the player with Escape removed the class again. The URL stayed the same. The detail page also has a second, paused `<video>` outside the player (the background trailer), so the presence of a `<video>` says nothing about the player.
+
 ## Noise seen during the analysis
 
 - Chrome's console showed many `net::ERR_ADDRESS_INVALID` errors and one HTTP 413. They come from the page's own third-party/telemetry requests (likely blocked by the user's setup) and are unrelated to the extension.

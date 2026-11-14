@@ -96,6 +96,24 @@
   visibility: hidden !important;
 }
 
+/* With the grey out setting on, a card that fails a filter stays in place, grey and faded,
+   so it differs from the coloured, dimmed unchecked cards. Hovering shows it normally.
+   A data attribute, because Prime Video rewrites the card's class attribute on hover.
+   The filter would also grey out our badges, and a child cannot undo it, so it goes on
+   every part of the card that does not hold the badges: the badges keep their colours. */
+[data-apbs-dimmed] > :not(:has(.apbs-badges), .apbs-badges),
+[data-apbs-dimmed] :has(.apbs-badges) > :not(:has(.apbs-badges), .apbs-badges) {
+  filter: grayscale(1);
+  opacity: 0.3;
+  transition: filter 0.15s, opacity 0.15s;
+}
+
+[data-apbs-dimmed]:hover > :not(:has(.apbs-badges), .apbs-badges),
+[data-apbs-dimmed]:hover :has(.apbs-badges) > :not(:has(.apbs-badges), .apbs-badges) {
+  filter: none;
+  opacity: 1;
+}
+
 /* With a filter on, a card whose check has not finished yet is dimmed until it is either hidden or shown. */
 .apbs-unchecked {
   opacity: 0.35;
@@ -136,6 +154,61 @@
 
 .apbs-panel[hidden] {
   display: none;
+}
+
+/* Hidden while Prime Video's player is open, so it does not cover the video. */
+body:has(#dv-web-player.dv-player-fullscreen) .apbs-panel {
+  display: none;
+}
+
+/* The collapse button at the right end of the header: a minus sign. */
+.apbs-collapse {
+  flex: none;
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #3d4c5c;
+  border-radius: 4px;
+  background: #2a3745;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The minus sign is drawn as a bar, so it is centred exactly whatever the font. */
+.apbs-collapse::before {
+  content: "";
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: #fff;
+}
+
+.apbs-collapse:hover,
+.apbs-expand:hover {
+  border-color: #00a8e1;
+}
+
+/* Collapsed, the panel is a small square with the extension's icon that expands it on click. */
+.apbs-panel.apbs-collapsed {
+  padding: 4px;
+}
+
+.apbs-panel.apbs-collapsed > :not(.apbs-expand),
+.apbs-panel:not(.apbs-collapsed) > .apbs-expand {
+  display: none;
+}
+
+.apbs-expand {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: var(--apbs-icon) center / 26px no-repeat;
+  cursor: pointer;
 }
 
 .apbs-panel label {

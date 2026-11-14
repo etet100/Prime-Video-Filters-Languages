@@ -13,7 +13,7 @@
 
 ## Quick Reference
 
-**What it is**: a Chrome extension (Manifest V3) that adds "in my subscription" and "has audio" and "has subtitles" badges (language chosen from PL, EN, DE, ES, FR, IT, CS) plus filters and an icons-only simplified view to the title cards on Prime Video pages (search, home, movies, TV, genres, collections, watchlist, detail page carousels).
+**What it is**: a Chrome extension (Manifest V3) that adds "in my subscription" and "has audio" and "has subtitles" badges (language chosen from PL, EN, DE, ES, FR, IT, CS) plus filters (hiding or greying out non-matching titles) and an icons-only simplified view to the title cards on Prime Video pages (search, home, movies, TV, genres, collections, watchlist, detail page carousels).
 **Tech**: plain JavaScript content script, no build step, only the `storage` permission (cache in `chrome.storage.local`). Loaded via "Load unpacked" in `chrome://extensions`.
 **Files**: `manifest.json`, `content.js` (all logic), `content.css` (badges + panel), `icons/` (extension icon, PNG 16/48/128: a magnifier with a play triangle), `.github/workflows/release.yml` (on a `v*` tag push: checks the tag against the manifest version, zips the extension files, creates a GitHub Release). A new file the extension needs at runtime must also be added to the `zip` command in that workflow. `images/` holds the screenshots used by `README.md`; it is not part of the extension and is not zipped.
 
