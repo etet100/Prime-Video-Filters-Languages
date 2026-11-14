@@ -12,7 +12,7 @@ It works on every page with title cards: search results, the home page (`/storef
 
 On a title's own page (`/detail/<id>`) the same three checks are also shown as a large banner at the top of the page, above the title art.
 
-A panel in the bottom-right corner can hide titles outside your subscription, titles without audio and/or without subtitles in the chosen language. The banner at the top is never hidden, and a carousel whose cards are all hidden stays on the page, empty.
+A panel in the bottom-right corner can hide titles outside your subscription, titles without audio and/or without subtitles in the chosen language. While a filter is on, a card that is not checked yet is dimmed until it is either hidden or shown normally. In long grids that Prime Video loads in parts (such as "Więcej do odkrycia" in search), a hidden card leaves an empty slot instead of the next cards moving up, otherwise the grid would scroll into an empty screen. The banner at the top is never hidden, and a carousel whose cards are all hidden stays on the page, empty.
 
 Everything the extension adds to the page carries its icon, so it is clear what is not Prime Video's own: the panel has the icon and the name "Prime Video Better Search" in its header and a blue border, and the badges (including the large ones on a title's page) sit in a dark frame with the icon on the left, separated from them by a thin line. The icon is embedded in `content.css` as a data URI, so the extension needs no `web_accessible_resources`.
 
@@ -43,7 +43,7 @@ The extension is a single content script (`content.js` + `content.css`), with no
 
   The language list is at `body.atf.state.detail.headerDetail[<title id>].audioTracks`, for example `["Polski", "English", ...]`. A track counts as the chosen language if its name starts with that language's own name (`Polski`, `English`, `Deutsch`, `Español`, `Français`, `Italiano`, `Čeština`, case-insensitive), so variants such as "English [Audio Description]" or "Español (España)" match too. The cache keeps the full list, so changing the language needs no new requests.
 - **Subtitles**: they come from the same response, at `headerDetail[<title id>].subtitles` (for example `["Polski", "Dansk", ...]`), so they need no extra request. They are matched the same way as audio tracks. A missing key counts as no subtitles.
-- Requests are made only for cards that are on (or near) the screen, a few at a time. When the audio or subtitles filter is on, all cards on the page are checked (with the "included only" filter on, all cards whose status is not in the DOM).
+- Requests are made only for cards that are on the screen or within 200 px of it, at most 3 at a time. When a filter needs a card's data (the audio or subtitles filter, or the "included only" filter for cards whose status is not in the DOM), cards up to one screen height above and below are checked too, with the cards on the screen first. Hidden cards make the next ones move up (except in long grids, where they leave empty slots), so they are checked in turn. Titles that scroll away or leave the page before their request starts are dropped from the queue.
 - **Cache**: each title is fetched at most once every 14 days. The result (audio list, subtitle list, subscription status, time) is kept in the extension's storage (`chrome.storage.local`, keys `audio:<detail id>`), shared by all Prime Video tabs. Expired entries, and entries saved before subtitles were added, are deleted when a page loads. Removing the extension clears the cache.
 
 ## Documentation
@@ -57,6 +57,8 @@ The extension is a single content script (`content.js` + `content.css`), with no
 - It relies on Prime Video's undocumented page structure and data, which can change at any time.
 - Matching is by name prefix, so an "English [Audio Description]" track alone would count as English audio. If a language is ever not detected, check its name in `audioTracks` and fix its pattern in `TRACK_LANGUAGES`.
 - Hiding cards inside a horizontal carousel can leave the carousel's scroll arrows slightly off.
+- In long grids such as "Więcej do odkrycia", hidden cards leave empty slots, so with a strict filter you scroll past gaps.
+- With a filter on, the "hidden" count in the panel covers only the cards checked so far (those that have been near the screen), not the whole page.
 - The audio and subtitle lists come from the title's detail page. For a series, that is the season the card links to, and other seasons may differ.
 - The audio and subtitle lists are what Prime Video's detail data says. They can list a track that the player does not offer when you press play (seen once on a title that was about to leave Prime); the extension cannot detect that.
 - Cached results can be up to 14 days old: a dub in your language added in the meantime, or a title that left Prime, shows up only after that. For regular cards, the subscription status is always read live from the page.

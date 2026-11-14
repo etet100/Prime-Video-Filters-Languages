@@ -96,6 +96,15 @@ The user asked whether the badges could also appear on `/storefront`. The probes
 - The parent of each card: in carousels an `<li>` holding just the card, in the search grid the `<ul>` directly. This decides what the filters hide.
 - The bounding boxes of Prime Video's own labels (`metadata-badge`, `status-badge`) relative to the poster: all in the top-right corner, so the extension's top-left badges do not overlap them.
 
+## Virtualized grids (2026-11-14)
+
+The user reported that with a filter on, the "Więcej do odkrycia" grid on the search page flashed its cards and then showed nothing, while without the filter the matching titles were there. The probes, all with `eval` on `/search?phrase=komedia` and `/search?phrase=Rambo`:
+
+- Logging every second the number of cards in the grid, how many were hidden or dimmed, and `document.documentElement.scrollHeight` while scrolling to the bottom: the card count stayed at about 70 while the page grew from about 4,500 to 18,000 px. So the grid keeps only a window of cards in the DOM.
+- Listing the children of `[data-testid="grid-container"]` with their inline styles: a title, a spacer `<div style="height: ...">`, the `grid-mini-details-controller`, a second spacer and `page-pagination-marker` (structure in PRIME_VIDEO_DATA.md).
+- At card position ~510 with the audio filter on, 30 of the 70 cards were hidden: the rendered window shrank to a few rows, and the screen below it was empty down to the footer. The spacers still assumed full rows. Hiding cards with `display: none` cannot work with this.
+- Logging the marker while scrolling to the end of the Rambo grid (357 titles): it disappeared after a few loads, well before the end, while one spacer always stayed above 0.
+
 ## Noise seen during the analysis
 
 - Chrome's console showed many `net::ERR_ADDRESS_INVALID` errors and one HTTP 413. They come from the page's own third-party/telemetry requests (likely blocked by the user's setup) and are unrelated to the extension.
@@ -106,4 +115,4 @@ The user asked whether the badges could also appear on `/storefront`. The probes
 - The extension itself has not been loaded and run in Chrome yet. Only the individual data probes above were run, by hand.
 - Whether language names change when the Prime Video UI language is not Polish. They looked like native names ("Polski", "Italiano", "日本語"), which suggests they do not.
 - How Prime Video reacts to many detail requests in a row (rate limiting).
-- Exactly how the "Więcej do odkrycia" grid loads further pages (it has pagination tokens). The extension does not depend on it: it just watches the DOM.
+- Exactly which requests the "Więcej do odkrycia" grid uses to load further pages (it has pagination tokens). The extension does not depend on them: it just watches the DOM. How the grid is rendered is known: see "Virtualized grids" below.

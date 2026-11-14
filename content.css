@@ -82,6 +82,16 @@
   display: none !important;
 }
 
+/* A hidden card in a virtualized grid keeps its slot, so the grid's scroll geometry stays right. */
+.apbs-empty-slot {
+  visibility: hidden !important;
+}
+
+/* With a filter on, a card whose check has not finished yet is dimmed until it is either hidden or shown. */
+.apbs-unchecked {
+  opacity: 0.35;
+}
+
 /* Filter panel, shown on pages that have title cards. */
 .apbs-panel {
   position: fixed;

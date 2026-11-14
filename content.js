@@ -190,15 +190,28 @@
   const cache = new Map();
   // Titles being fetched or whose fetch failed: detail id -> 'loading' | 'error'.
   const pending = new Map();
-  const queue = [];
+  // Titles waiting to be fetched, most urgent first. Rebuilt on every update from the
+  // cards on or near the screen, so titles that scrolled away or left the page drop out.
+  let queue = [];
+  let queued = new Set();
   let runningRequests = 0;
+  // Cards on the screen or within 200 px of it, and cards within one screen height of it.
+  const nearCards = new Set();
+  const aheadCards = new Set();
+  // Grid containers known to be virtualized (see isVirtualGrid).
+  const virtualGrids = new WeakSet();
   let filters = loadFilters();
   let settings = loadSettings();
   let texts = TEXTS[settings.language];
   let panel = null;
   let scheduled = false;
 
-  const visibilityObserver = new IntersectionObserver(onCardsVisible, { rootMargin: '200px' });
+  const nearObserver = new IntersectionObserver((entries) => trackCards(entries, nearCards), {
+    rootMargin: '200px',
+  });
+  const aheadObserver = new IntersectionObserver((entries) => trackCards(entries, aheadCards), {
+    rootMargin: '100% 0px',
+  });
 
   // ---------- storage ----------
 
@@ -331,7 +344,7 @@
       const pattern = TRACK_LANGUAGES[settings.language].track;
       return entry[field].some((name) => pattern.test(name)) ? 'yes' : 'no';
     }
-    return pending.get(id) || 'unknown';
+    return pending.get(id) || (queued.has(id) ? 'loading' : 'unknown');
   }
 
   // Fetches the detail page the same way the Prime Video web app does on in-app
@@ -412,18 +425,35 @@
     return null;
   }
 
-  function enqueue(id) {
-    if (getEntry(id) || pending.has(id)) {
-      return;
+  // Rebuilds the queue, in this order: the title of the detail page being viewed, then
+  // the cards on or near the screen, then - only when a filter needs their data - the
+  // cards within one screen of it. Each group is in page order. With a filter on, hidden
+  // cards make the next ones move up into these zones, so they get checked in turn
+  // (except in virtualized grids, where hidden cards leave empty slots).
+  function rebuildQueue(pageId, cards) {
+    const wanted = new Set();
+    if (pageId) {
+      wanted.add(pageId);
     }
-    pending.set(id, 'loading');
-    queue.push(id);
-    pumpQueue();
+    for (const info of cards) {
+      if (nearCards.has(info.card)) {
+        wanted.add(info.id);
+      }
+    }
+    for (const info of cards) {
+      if (aheadCards.has(info.card) && filtersNeedDetail(info)) {
+        wanted.add(info.id);
+      }
+    }
+    queue = [...wanted].filter((id) => !getEntry(id) && !pending.has(id));
+    queued = new Set(queue);
   }
 
   function pumpQueue() {
     while (runningRequests < MAX_PARALLEL_REQUESTS && queue.length > 0) {
       const id = queue.shift();
+      queued.delete(id);
+      pending.set(id, 'loading');
       runningRequests++;
       fetchDetail(id)
         .then((entry) => {
@@ -442,12 +472,24 @@
     }
   }
 
-  function onCardsVisible(entries) {
+  // Keeps `set` in sync with the cards inside an observer's zone.
+  function trackCards(entries, set) {
     for (const entry of entries) {
       if (entry.isIntersecting) {
-        const id = getDetailId(entry.target, getKind(entry.target));
-        if (id) {
-          enqueue(id);
+        set.add(entry.target);
+      } else {
+        set.delete(entry.target);
+      }
+    }
+    scheduleUpdate();
+  }
+
+  // Cards removed from the page may not get a final "not intersecting" entry.
+  function forgetRemovedCards() {
+    for (const set of [nearCards, aheadCards]) {
+      for (const card of set) {
+        if (!card.isConnected) {
+          set.delete(card);
         }
       }
     }
@@ -480,20 +522,28 @@
     return entry && typeof entry.entitled === 'boolean' ? entry.entitled : null;
   }
 
-  function processCard(card) {
-    const kind = getKind(card);
-    const id = getDetailId(card, kind);
-    if (!id) {
-      return;
+  // The cards on the page that link to a title, in page order: {card, kind, id, entitled}.
+  function collectCards(elements) {
+    const cards = [];
+    for (const card of elements) {
+      const kind = getKind(card);
+      const id = getDetailId(card, kind);
+      if (id) {
+        cards.push({ card, kind, id, entitled: getEntitlement(card, kind, id) });
+      }
     }
-    visibilityObserver.observe(card);
+    return cards;
+  }
 
-    let entitled = getEntitlement(card, kind, id);
-    // With a filter on, every title it depends on must be checked, not just the visible
-    // ones, otherwise off-screen titles that fail the filter would never be hidden.
-    if (filters.audio || filters.subtitles || (filters.entitled && entitled === null)) {
-      enqueue(id);
-    }
+  // Whether the active filters need the title's detail data to decide if the card is hidden.
+  function filtersNeedDetail({ kind, entitled }) {
+    return kind.hideable && (filters.audio || filters.subtitles || (filters.entitled && entitled === null));
+  }
+
+  function processCard(info) {
+    const { card, kind, id, entitled } = info;
+    nearObserver.observe(card);
+    aheadObserver.observe(card);
 
     const status = getLanguageStatus(id, 'tracks');
     const subtitleStatus = getLanguageStatus(id, 'subtitles');
@@ -502,8 +552,39 @@
     if (kind.hideable) {
       const hidden = (filters.entitled && entitled === false) || (filters.audio && status === 'no') ||
         (filters.subtitles && subtitleStatus === 'no');
-      setHidden(getHideTarget(card), hidden);
+      // A card the filters cannot decide on yet is dimmed until its check finishes.
+      // A failed check counts as finished, so the card does not stay dimmed.
+      const unchecked = !hidden && filtersNeedDetail(info) && !getEntry(id) && pending.get(id) !== 'error';
+      const virtual = isVirtualGrid(card);
+      setClass(getHideTarget(card), 'apbs-hidden', hidden && !virtual);
+      setClass(card, 'apbs-empty-slot', hidden && virtual);
+      setClass(card, 'apbs-unchecked', unchecked);
     }
+  }
+
+  // Prime Video virtualizes long grids (e.g. "Więcej do odkrycia" in search): only a window
+  // of cards is in the DOM, between two spacer <div>s whose heights assume every card is
+  // shown. Removing cards from the layout there shrinks the window and leaves the screen
+  // empty, so in these grids a hidden card keeps its slot, empty. A grid counts as
+  // virtualized once it has a pagination marker or a spacer taller than 0, and stays so,
+  // so its cards do not jump between the two modes.
+  function isVirtualGrid(card) {
+    const container = card.closest('[data-testid="grid-container"]');
+    if (!container) {
+      return false;
+    }
+    if (virtualGrids.has(container)) {
+      return true;
+    }
+    const paginated = !!container.querySelector(':scope > [data-testid="page-pagination-marker"]');
+    const spaced = [...container.children].some(
+      (child) => child.matches('div[style*="height"]') && parseFloat(child.style.height) > 0,
+    );
+    if (paginated || spaced) {
+      virtualGrids.add(container);
+      return true;
+    }
+    return false;
   }
 
   // In carousels each card sits alone in an <li>: hiding just the card would leave
@@ -516,9 +597,9 @@
     return card;
   }
 
-  function setHidden(element, hidden) {
-    if (element.classList.contains('apbs-hidden') !== hidden) {
-      element.classList.toggle('apbs-hidden', hidden);
+  function setClass(element, className, on) {
+    if (element.classList.contains(className) !== on) {
+      element.classList.toggle(className, on);
     }
   }
 
@@ -661,7 +742,7 @@
     if (!status) {
       return;
     }
-    const hiddenCount = document.querySelectorAll('.apbs-hidden').length;
+    const hiddenCount = document.querySelectorAll('.apbs-hidden, .apbs-empty-slot').length;
     const waiting = queue.length + runningRequests;
     let text = `${texts.hidden}: ${hiddenCount}`;
     if (waiting > 0) {
@@ -683,8 +764,7 @@
   }
 
   // A large banner at the top of the title's own page with the same three checks as the card badges.
-  function renderDetailBanner() {
-    const id = getPageDetailId();
+  function renderDetailBanner(id) {
     const main = document.querySelector('main[data-testid="detailpage-main"]');
     let banner = document.querySelector('.apbs-detail-banner');
     if (!id || !main) {
@@ -704,7 +784,6 @@
     if (banner.dataset.id !== id) {
       banner.dataset.id = id;
     }
-    enqueue(id);
     const entry = getEntry(id);
     const entitled = entry && typeof entry.entitled === 'boolean' ? entry.entitled : null;
     setBadges(banner, entitled, getLanguageStatus(id, 'tracks'), getLanguageStatus(id, 'subtitles'));
@@ -712,10 +791,15 @@
 
   function update() {
     scheduled = false;
-    renderDetailBanner();
-    const cards = document.querySelectorAll(ALL_CARDS_SELECTOR);
+    forgetRemovedCards();
+    const pageId = getPageDetailId();
+    const elements = document.querySelectorAll(ALL_CARDS_SELECTOR);
+    const cards = collectCards(elements);
+    rebuildQueue(pageId, cards);
+    pumpQueue();
+    renderDetailBanner(pageId);
     // The panel is shown only on pages that have title cards.
-    if (cards.length === 0) {
+    if (elements.length === 0) {
       if (panel && !panel.hidden) {
         panel.hidden = true;
       }

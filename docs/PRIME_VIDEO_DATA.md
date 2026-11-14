@@ -27,6 +27,19 @@ Each result card:
 ```
 
 - Cards sit in lists under `[data-testid="grid-mini-details-controller"]` (grids, the card is a direct child of the `<ul>`) or `[data-testid="card-container-list"]` (carousels, each card alone in an `<li>`).
+- Grids are virtualized. The structure is:
+
+  ```html
+  <div data-testid="grid-container">
+    <span>...<span data-testid="carousel-title">Więcej do odkrycia</span>...</span>
+    <div style="height: 15116.7px;"></div>       <!-- spacer for the rows above the window -->
+    <div data-testid="grid-mini-details-controller"><ul>...about 70 cards...</ul></div>
+    <div style="height: 1566.7px;"></div>        <!-- spacer for the rows below the window -->
+    <div data-testid="page-pagination-marker"></div>   <!-- while more pages can be loaded -->
+  </div>
+  ```
+
+  Only a window of about 70 cards (about 12 rows of 6) is in the DOM; the spacers' heights assume every row is full. Cards carry `data-card-position` (their index in the whole grid). A short grid such as "Najlepsze wyniki" has the same structure with both spacers at `height: 0`. The pagination marker can disappear while scrolling, before the end of the list, so it alone does not identify a long grid.
 - CSS class names are hashed (e.g. `ulDoOY`) and change between builds, so use the `data-*` attributes only.
 - `Entitled` = "W pakiecie z Prime". `Unentitled` covers "Wypożycz lub kup", "Wypróbuj bezpłatnie, wypożycz lub kup" and "Bezpłatny okres próbny" (channel subscriptions).
 - The page is a single-page app: results load lazily and cards may be re-rendered, which can remove injected nodes.
