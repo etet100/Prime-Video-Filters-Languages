@@ -5,7 +5,7 @@
 - **Form**: a Chrome extension. A Tampermonkey userscript and a console snippet were the other options.
 - **Behaviour**: badges on every search result card **plus** filters to hide titles. Badges alone was the other option.
 - **Scope**: originally the search page only. Extended later the same day to every page with title cards, with badges and filters: home (`/storefront`), `/movie`, `/tv`, `/genre/...`, `/collection/...`, the watchlist and detail page carousels, including the super carousel posters and the top banner.
-- **Location**: a separate project in `/home/andrzej/projekty/AmazonPrimeBetterSearch`.
+- **Location**: a separate project in its own directory.
 - **Cache**: each title is requested at most once per 14 days. The cache lives in `chrome.storage.local`, which needs the `storage` permission. Plain `localStorage` without expiry was the other option. Refreshing on a 14-day TTL was the user's choice over a "clear cache" button or never refreshing.
 - **Title page banner**: on `/detail/<id>` a large banner at the top shows the same three checks (subscription, audio, subtitles in the chosen language), read from the same cached detail data as the card badges.
 - **Empty carousels**: when the filters hide every card of a carousel, the carousel (its title) stays on the page. Hiding the whole row was the other option.

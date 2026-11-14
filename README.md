@@ -56,8 +56,7 @@ Your settings (filters, language, grey out, simplified view, collapsed panel) ar
 
 1. Open `chrome://extensions` in Chrome.
 2. Turn on **Developer mode** (top-right).
-3. Click **Load unpacked** and pick this directory. From Windows Chrome with the project in WSL, the path is
-   `\\wsl.localhost\Ubuntu-24.04\home\andrzej\projekty\AmazonPrimeBetterSearch`.
+3. Click **Load unpacked** and pick this directory.
 4. Open (or reload) a Prime Video page.
 
 ![The extensions page with Developer mode on and the extension loaded](images/install.png)
