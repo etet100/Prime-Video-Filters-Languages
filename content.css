@@ -1,0 +1,182 @@
+/* The extension's icon (icons/icon48.png) as a data URI, so the page needs no access to extension files.
+   It marks everything the extension adds to the page. */
+:root {
+  --apbs-icon: url("data:image/png;base64,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");
+}
+
+/* A badge group: a dark frame with the extension's icon, a separator line and the badges. */
+.apbs-badges {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 4px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  background: rgba(8, 14, 22, 0.88);
+  pointer-events: none;
+}
+
+/* The extension's icon, once per group. */
+.apbs-logo {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  background: var(--apbs-icon) center / contain no-repeat;
+}
+
+/* The badges, to the right of a separator line. Stacked, they all get the same width. */
+.apbs-badge-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-left: 6px;
+  border-left: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* Pinned to the top-left corner of a card's image. */
+.apbs-badges.apbs-corner {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 5;
+}
+
+/* In the top banner the group flows below the title's text instead, with the badges in a row. */
+.apbs-badges.apbs-inline {
+  margin-top: 8px;
+}
+
+.apbs-inline .apbs-logo {
+  width: 20px;
+  height: 20px;
+}
+
+.apbs-inline .apbs-badge-list {
+  flex-direction: row;
+}
+
+.apbs-badge {
+  font: 600 11px/1.3 system-ui, sans-serif;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.apbs-yes {
+  background: #1a7f37;
+}
+
+.apbs-no {
+  background: #b42318;
+}
+
+.apbs-pending {
+  background: rgba(60, 60, 60, 0.85);
+}
+
+.apbs-hidden {
+  display: none !important;
+}
+
+/* Filter panel, shown on pages that have title cards. */
+.apbs-panel {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2147483647;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #1b2530;
+  color: #fff;
+  font: 13px/1.4 system-ui, sans-serif;
+  border: 1px solid #00a8e1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.apbs-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.apbs-title::before {
+  content: "";
+  flex: none;
+  width: 20px;
+  height: 20px;
+  background: var(--apbs-icon) center / contain no-repeat;
+}
+
+.apbs-panel[hidden] {
+  display: none;
+}
+
+.apbs-panel label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}
+
+.apbs-status {
+  color: #aab7c4;
+  font-size: 12px;
+}
+
+.apbs-panel label.apbs-select {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  cursor: default;
+}
+
+.apbs-panel select {
+  font: inherit;
+  color: #fff;
+  background: #2a3745;
+  border: 1px solid #3d4c5c;
+  border-radius: 4px;
+  padding: 2px 4px;
+}
+
+/* Large banner at the top of a title's own page: the badge group, bigger, with the badges in a row. */
+.apbs-detail-banner {
+  position: relative;
+  z-index: 5;
+  padding: 88px 5% 0;
+  margin-bottom: -92px;
+  pointer-events: none;
+}
+
+.apbs-badges.apbs-large {
+  gap: 12px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.apbs-large .apbs-logo {
+  width: 44px;
+  height: 44px;
+}
+
+.apbs-large .apbs-badge-list {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-left: 12px;
+}
+
+.apbs-large .apbs-badge {
+  font-size: 22px;
+  padding: 8px 16px;
+  border-radius: 8px;
+}
