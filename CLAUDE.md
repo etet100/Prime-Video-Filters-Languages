@@ -1,4 +1,4 @@
-# Prime Video Better Search - Project Guide
+# Prime Video Filters & Languages - Project Guide
 
 ## Rules for This Project
 
@@ -15,11 +15,12 @@
 
 **What it is**: a Chrome extension (Manifest V3) that adds "in my subscription" and "has audio" and "has subtitles" badges (language chosen from PL, EN, DE, ES, FR, IT, CS) plus filters and an icons-only simplified view to the title cards on Prime Video pages (search, home, movies, TV, genres, collections, watchlist, detail page carousels).
 **Tech**: plain JavaScript content script, no build step, only the `storage` permission (cache in `chrome.storage.local`). Loaded via "Load unpacked" in `chrome://extensions`.
-**Files**: `manifest.json`, `content.js` (all logic), `content.css` (badges + panel), `icons/` (extension icon, PNG 16/48/128: a magnifier with a play triangle).
+**Files**: `manifest.json`, `content.js` (all logic), `content.css` (badges + panel), `icons/` (extension icon, PNG 16/48/128: a magnifier with a play triangle), `.github/workflows/release.yml` (on a `v*` tag push: checks the tag against the manifest version, zips the extension files, creates a GitHub Release). A new file the extension needs at runtime must also be added to the `zip` command in that workflow. `images/` holds the screenshots used by `README.md`; it is not part of the extension and is not zipped.
 
 ## Documentation
 
-- [README.md](README.md) - what the extension does, installation, how it works, limitations
+- [README.md](README.md) - marketing-style overview (features, screenshots), installation
+- [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md) - where the data comes from, requests, cache, on-page behaviour, limitations
 - [docs/ANALYSIS.md](docs/ANALYSIS.md) - how the Prime Video pages were analysed (steps, tools, measurements)
 - [docs/PRIME_VIDEO_DATA.md](docs/PRIME_VIDEO_DATA.md) - reference of the page structure and data the extension relies on
 - [docs/DECISIONS.md](docs/DECISIONS.md) - decisions agreed with the user, and open questions

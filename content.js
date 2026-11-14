@@ -1,4 +1,4 @@
-// Prime Video Better Search - content script.
+// Prime Video Filters & Languages - content script.
 //
 // On every Prime Video page that shows title cards (search, home, movies, TV,
 // genres, collections, watchlist, carousels on detail pages) it adds three badges
@@ -15,6 +15,8 @@
 // A small panel lets the user hide titles that fail any of the checks, choose
 // the language (used for the audio and subtitles checks and for the panel's own texts)
 // and switch to a simplified view, where the badges show only icons.
+// When the detail requests mostly fail or an expected JSON field is never found, the panel
+// shows a warning that Prime Video probably changed (see findProblems).
 (() => {
   'use strict';
 
@@ -64,6 +66,9 @@
   const FILTERS_KEY = 'apbs:filters';
   const MAX_PARALLEL_REQUESTS = 3;
   const SETTINGS_KEY = 'apbs:settings';
+  // Samples needed before the response statistics are trusted (see findProblems).
+  const FAILURE_MIN_SAMPLE = 6;
+  const MISSING_DATA_MIN_SAMPLE = 10;
 
   // Languages the user can choose. `track` matches the start of an audio or subtitles
   // track name, which Prime Video writes in the language's own name.
@@ -76,7 +81,7 @@
     it: { code: 'IT', name: 'Italiano', track: /^italiano/i },
     cs: { code: 'CS', name: 'Čeština', track: /^(čeština|česky|cesky)/i },
   };
-  const DEFAULT_LANGUAGE = 'pl';
+  const DEFAULT_LANGUAGE = 'en';
 
   // Texts of the panel and badges, per language. `c` is the language's code.
   const TEXTS = {
@@ -95,6 +100,8 @@
       compact: 'Pokazuj tylko ikony',
       hidden: 'Ukryte',
       checking: 'sprawdzanie',
+      warnRequests: 'Sprawdzanie często zawodzi - Prime Video jest niedostępne albo się zmieniło',
+      warnData: (f) => `Prime Video zmieniło format danych (${f}) - wyniki mogą być błędne`,
     },
     en: {
       entitled: 'Included',
@@ -111,6 +118,8 @@
       compact: 'Show icons only',
       hidden: 'Hidden',
       checking: 'checking',
+      warnRequests: 'Checks keep failing - Prime Video is unreachable or has changed',
+      warnData: (f) => `Prime Video changed its data format (${f}) - results may be wrong`,
     },
     de: {
       entitled: 'Im Abo',
@@ -127,6 +136,8 @@
       compact: 'Nur Symbole anzeigen',
       hidden: 'Ausgeblendet',
       checking: 'Prüfung',
+      warnRequests: 'Prüfungen schlagen oft fehl - Prime Video ist nicht erreichbar oder wurde geändert',
+      warnData: (f) => `Prime Video hat sein Datenformat geändert (${f}) - Ergebnisse können falsch sein`,
     },
     es: {
       entitled: 'En tu plan',
@@ -143,6 +154,8 @@
       compact: 'Mostrar solo iconos',
       hidden: 'Ocultos',
       checking: 'comprobando',
+      warnRequests: 'Las comprobaciones fallan a menudo - Prime Video no responde o ha cambiado',
+      warnData: (f) => `Prime Video ha cambiado su formato de datos (${f}) - los resultados pueden ser incorrectos`,
     },
     fr: {
       entitled: 'Inclus',
@@ -159,6 +172,8 @@
       compact: 'Afficher uniquement les icônes',
       hidden: 'Masqués',
       checking: 'vérification',
+      warnRequests: 'Les vérifications échouent souvent - Prime Video est inaccessible ou a changé',
+      warnData: (f) => `Prime Video a changé son format de données (${f}) - les résultats peuvent être faux`,
     },
     it: {
       entitled: 'Incluso',
@@ -175,6 +190,8 @@
       compact: 'Mostra solo le icone',
       hidden: 'Nascosti',
       checking: 'verifica',
+      warnRequests: 'I controlli falliscono spesso - Prime Video non è raggiungibile o è cambiato',
+      warnData: (f) => `Prime Video ha cambiato il formato dei dati (${f}) - i risultati potrebbero essere errati`,
     },
     cs: {
       entitled: 'V předplatném',
@@ -191,6 +208,8 @@
       compact: 'Zobrazovat jen ikony',
       hidden: 'Skryto',
       checking: 'kontrola',
+      warnRequests: 'Kontroly často selhávají - Prime Video je nedostupné nebo se změnilo',
+      warnData: (f) => `Prime Video změnilo formát dat (${f}) - výsledky mohou být chybné`,
     },
   };
 
@@ -203,6 +222,16 @@
   let queue = [];
   let queued = new Set();
   let runningRequests = 0;
+  // What this tab's detail requests returned, used to notice that Prime Video changed:
+  //   ok            - responses that had the audio tracks,
+  //   failed        - requests that failed for any reason,
+  //   noTracks      - responses (valid JSON) without any audio tracks list,
+  //   withEntitlement / withSubtitles - of the `ok` responses, those that had that data.
+  const stats = { ok: 0, failed: 0, noTracks: 0, withEntitlement: 0, withSubtitles: 0 };
+  // Problems found in `stats` (see findProblems): 'requests', 'audioTracks', 'entitlementType'
+  // or 'subtitles'. Recomputed on every update; each one is logged to the console once.
+  let problems = new Set();
+  const loggedProblems = new Set();
   // Cards on the screen or within 200 px of it, and cards within one screen height of it.
   const nearCards = new Set();
   const aheadCards = new Set();
@@ -232,7 +261,7 @@
     }
   }
 
-  // The browser's language if the extension supports it, otherwise Polish.
+  // The browser's language if the extension supports it, otherwise English.
   function browserLanguage() {
     const code = (navigator.language || '').toLowerCase().split('-')[0];
     return TRACK_LANGUAGES[code] ? code : DEFAULT_LANGUAGE;
@@ -297,7 +326,7 @@
         await chrome.storage.local.remove(expired);
       }
     } catch (e) {
-      console.warn('[Prime Video Better Search] cache could not be loaded:', e);
+      console.warn('[Prime Video Filters & Languages] cache could not be loaded:', e);
     }
   }
 
@@ -305,7 +334,7 @@
     cache.set(id, entry);
     try {
       chrome.storage.local.set({ [CACHE_PREFIX + id]: entry }).catch((e) => {
-        console.warn('[Prime Video Better Search] cache write failed:', e);
+        console.warn('[Prime Video Filters & Languages] cache write failed:', e);
       });
     } catch (e) {
       // The extension was reloaded while this tab stayed open - the cache is not reachable.
@@ -352,6 +381,10 @@
   function getLanguageStatus(id, field) {
     const entry = getEntry(id);
     if (entry) {
+      // While the subtitles data looks broken, "no subtitles" cannot be trusted.
+      if (field === 'subtitles' && problems.has('subtitles')) {
+        return 'unknown';
+      }
       const pattern = TRACK_LANGUAGES[settings.language].track;
       return entry[field].some((name) => pattern.test(name)) ? 'yes' : 'no';
     }
@@ -369,50 +402,50 @@
       throw new Error(`HTTP ${response.status}`);
     }
     const data = await response.json();
-    const tracks = findAudioTracks(data);
-    if (!tracks) {
+    const source = findTrackSource(data);
+    if (!source) {
+      stats.noTracks++;
       throw new Error('audioTracks not found in the response');
     }
-    return { tracks, subtitles: findSubtitles(data), entitled: findEntitlement(data), time: Date.now() };
+    // A title without subtitles may have no such key, which counts as an empty list.
+    // The statistics tell that apart from a renamed key (see findProblems).
+    const hasSubtitles = isNameList(source.subtitles);
+    const entitled = findEntitlement(data);
+    stats.ok++;
+    stats.withSubtitles += hasSubtitles ? 1 : 0;
+    stats.withEntitlement += entitled === null ? 0 : 1;
+    return { tracks: source.audioTracks, subtitles: hasSubtitles ? source.subtitles : [], entitled, time: Date.now() };
   }
 
-  // The tracks live in body.atf.state.detail.headerDetail[<title id>].audioTracks;
-  // fall back to a deep search in case the layout changes.
-  function findAudioTracks(data) {
+  // A list of track names, e.g. ["Polski", "English"].
+  function isNameList(list) {
+    return Array.isArray(list) && list.every((name) => typeof name === 'string');
+  }
+
+  // The object that holds the audio tracks, and next to them the subtitles. It is
+  // body.atf.state.detail.headerDetail[<title id>]; fall back to a deep search in case
+  // the layout changes.
+  function findTrackSource(data) {
     const header = data?.body?.atf?.state?.detail?.headerDetail;
     if (header) {
       for (const item of Object.values(header)) {
-        if (Array.isArray(item?.audioTracks)) {
-          return item.audioTracks;
+        if (isNameList(item?.audioTracks)) {
+          return item;
         }
       }
     }
-    return deepFindAudioTracks(data);
+    return deepFindTrackSource(data);
   }
 
-  // The subtitles live next to the audio tracks, in headerDetail[<title id>].subtitles.
-  // A title without subtitles may have no such key, which counts as an empty list.
-  function findSubtitles(data) {
-    const header = data?.body?.atf?.state?.detail?.headerDetail;
-    if (header) {
-      for (const item of Object.values(header)) {
-        if (Array.isArray(item?.audioTracks)) {
-          return Array.isArray(item.subtitles) ? item.subtitles : [];
-        }
-      }
-    }
-    return [];
-  }
-
-  function deepFindAudioTracks(node) {
+  function deepFindTrackSource(node) {
     if (!node || typeof node !== 'object') {
       return null;
     }
-    if (Array.isArray(node.audioTracks)) {
-      return node.audioTracks;
+    if (isNameList(node.audioTracks)) {
+      return node;
     }
     for (const value of Object.values(node)) {
-      const found = deepFindAudioTracks(value);
+      const found = deepFindTrackSource(value);
       if (found) {
         return found;
       }
@@ -434,6 +467,39 @@
       return false;
     }
     return null;
+  }
+
+  // Notices that Prime Video changed from what this tab's requests returned. A few
+  // failures are normal, so each rule needs a minimum number of responses:
+  //   requests        - more than half of the requests failed (HTTP error, not JSON, offline),
+  //   audioTracks     - more than half of the valid responses had no audio tracks list,
+  //   entitlementType - none of the responses had the subscription status,
+  //   subtitles       - none of the responses had a subtitles list (a title without
+  //                     subtitles is rare, so a long run of them means the key moved).
+  function findProblems() {
+    const found = new Set();
+    const total = stats.ok + stats.failed;
+    const transportFailed = stats.failed - stats.noTracks;
+    const parsed = stats.ok + stats.noTracks;
+    if (total >= FAILURE_MIN_SAMPLE && transportFailed * 2 > total) {
+      found.add('requests');
+    }
+    if (parsed >= FAILURE_MIN_SAMPLE && stats.noTracks * 2 > parsed) {
+      found.add('audioTracks');
+    }
+    if (stats.ok >= MISSING_DATA_MIN_SAMPLE && stats.withEntitlement === 0) {
+      found.add('entitlementType');
+    }
+    if (stats.ok >= MISSING_DATA_MIN_SAMPLE && stats.withSubtitles === 0) {
+      found.add('subtitles');
+    }
+    for (const problem of found) {
+      if (!loggedProblems.has(problem)) {
+        loggedProblems.add(problem);
+        console.warn(`[Prime Video Filters & Languages] problem detected: ${problem}`, { ...stats });
+      }
+    }
+    return found;
   }
 
   // Rebuilds the queue, in this order: the title of the detail page being viewed, then
@@ -472,7 +538,8 @@
           pending.delete(id);
         })
         .catch((error) => {
-          console.warn(`[Prime Video Better Search] check failed for ${id}:`, error);
+          console.warn(`[Prime Video Filters & Languages] check failed for ${id}:`, error);
+          stats.failed++;
           pending.set(id, 'error');
         })
         .finally(() => {
@@ -699,7 +766,7 @@
     const code = TRACK_LANGUAGES[settings.language].code;
     const title = document.createElement('div');
     title.className = 'apbs-title';
-    title.textContent = 'Prime Video Better Search';
+    title.textContent = 'Prime Video Filters & Languages';
     panel.append(
       title,
       createLanguageSelect(),
@@ -707,11 +774,14 @@
       createCheckbox('audio', texts.filterAudio(code)),
       createCheckbox('subtitles', texts.filterSubtitles(code)),
     );
+    const warning = document.createElement('div');
+    warning.className = 'apbs-warning';
+    warning.hidden = true;
     const status = document.createElement('div');
     status.className = 'apbs-status';
     // The least important setting goes last, below a separator line, with the icons' legend under it.
     const legend = createLegend(code);
-    panel.append(status, createCompactCheckbox(legend), legend);
+    panel.append(warning, status, createCompactCheckbox(legend), legend);
     document.body.append(panel);
   }
 
@@ -791,7 +861,30 @@
     return label;
   }
 
+  // The warning about a changed Prime Video: one line for failing requests, one naming
+  // the data fields that were not found.
+  function updatePanelWarning() {
+    const warning = panel && panel.querySelector('.apbs-warning');
+    if (!warning) {
+      return;
+    }
+    const lines = [];
+    if (problems.has('requests')) {
+      lines.push(texts.warnRequests);
+    }
+    const fields = ['audioTracks', 'entitlementType', 'subtitles'].filter((field) => problems.has(field));
+    if (fields.length > 0) {
+      lines.push(texts.warnData(fields.join(', ')));
+    }
+    const text = lines.join('\n');
+    if (warning.textContent !== text) {
+      warning.textContent = text;
+    }
+    warning.hidden = text === '';
+  }
+
   function updatePanelStatus() {
+    updatePanelWarning();
     const status = panel && panel.querySelector('.apbs-status');
     if (!status) {
       return;
@@ -846,6 +939,7 @@
   function update() {
     scheduled = false;
     forgetRemovedCards();
+    problems = findProblems();
     const pageId = getPageDetailId();
     const elements = document.querySelectorAll(ALL_CARDS_SELECTOR);
     const cards = collectCards(elements);

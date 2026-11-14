@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Prime Video Better Search",
+  "name": "Prime Video Filters & Languages",
   "version": "0.1.0",
   "description": "Marks Prime Video titles that are included in your subscription and that have Polish audio, and lets you filter by both.",
   "icons": {

@@ -150,6 +150,21 @@
   font-size: 12px;
 }
 
+/* Shown when Prime Video seems to have changed; one line per problem. */
+.apbs-warning {
+  max-width: 240px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #5c1f1f;
+  border: 1px solid #e0524d;
+  font-size: 12px;
+  white-space: pre-line;
+}
+
+.apbs-warning[hidden] {
+  display: none;
+}
+
 /* A panel row set apart from the ones above by a thin line. */
 .apbs-panel .apbs-separated {
   margin-top: 2px;
