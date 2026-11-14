@@ -63,16 +63,6 @@ Your settings (filters, language, grey out, simplified view, collapsed panel) ar
 
 After changing the code, click the reload icon on the extension's card in `chrome://extensions` and reload the Prime Video tab.
 
-## Releases
-
-Pushing a version tag builds a release: GitHub Actions ([.github/workflows/release.yml](.github/workflows/release.yml)) packs `manifest.json`, `content.js`, `content.css` and `icons/` into a ZIP and attaches it to a GitHub Release. The tag must match `version` in `manifest.json`, otherwise the build fails.
-
-```bash
-# after setting "version": "0.2.0" in manifest.json and committing
-git tag v0.2.0
-git push origin v0.2.0
-```
-
 ## Good to know
 
 - It relies on Prime Video's undocumented page structure, which can change at any time.

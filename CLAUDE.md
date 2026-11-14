@@ -10,6 +10,7 @@
 - In user-facing texts (badges, panel), use a plain " - " instead of an em dash "—"
 - Update all documentation affected by a change in the same change: `README.md`, `CLAUDE.md`, `docs/*` and code comments. A comment that says something is "not done yet" is wrong as soon as it is done, so search for the claim and fix every copy
 - Never write session cookies, tokens or other account data seen in request headers into files, docs or commits
+- `README.md` is for ordinary users (what the extension does, screenshots, installation). Keep developer-only material out of it (release process, CI, build, internals) and put it in `docs/` instead
 
 ## Quick Reference
 
@@ -24,6 +25,7 @@
 - [docs/ANALYSIS.md](docs/ANALYSIS.md) - how the Prime Video pages were analysed (steps, tools, measurements)
 - [docs/PRIME_VIDEO_DATA.md](docs/PRIME_VIDEO_DATA.md) - reference of the page structure and data the extension relies on
 - [docs/DECISIONS.md](docs/DECISIONS.md) - decisions agreed with the user, and open questions
+- [docs/RELEASING.md](docs/RELEASING.md) - how to publish a release (version tag, GitHub Actions workflow)
 
 ## Working with the live site
 
