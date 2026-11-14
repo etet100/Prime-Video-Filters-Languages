@@ -12,8 +12,9 @@
 //     (read from `subtitles` in the same JSON).
 // On a title's own detail page the same three checks are shown as a large banner
 // at the top of the page.
-// A small panel lets the user hide titles that fail any of the checks, and choose
-// the language (used for the audio and subtitles checks and for the panel's own texts).
+// A small panel lets the user hide titles that fail any of the checks, choose
+// the language (used for the audio and subtitles checks and for the panel's own texts)
+// and switch to a simplified view, where the badges show only icons.
 (() => {
   'use strict';
 
@@ -91,6 +92,7 @@
       filterAudio: (c) => `Tylko z audio ${c}`,
       filterSubtitles: (c) => `Tylko z napisami ${c}`,
       language: 'Język panelu',
+      compact: 'Pokazuj tylko ikony',
       hidden: 'Ukryte',
       checking: 'sprawdzanie',
     },
@@ -106,6 +108,7 @@
       filterAudio: (c) => `Only with ${c} audio`,
       filterSubtitles: (c) => `Only with ${c} subtitles`,
       language: 'Panel language',
+      compact: 'Show icons only',
       hidden: 'Hidden',
       checking: 'checking',
     },
@@ -121,6 +124,7 @@
       filterAudio: (c) => `Nur mit ${c}-Audio`,
       filterSubtitles: (c) => `Nur mit ${c}-Untertiteln`,
       language: 'Sprache des Panels',
+      compact: 'Nur Symbole anzeigen',
       hidden: 'Ausgeblendet',
       checking: 'Prüfung',
     },
@@ -136,6 +140,7 @@
       filterAudio: (c) => `Solo con audio ${c}`,
       filterSubtitles: (c) => `Solo con subtítulos ${c}`,
       language: 'Idioma del panel',
+      compact: 'Mostrar solo iconos',
       hidden: 'Ocultos',
       checking: 'comprobando',
     },
@@ -151,6 +156,7 @@
       filterAudio: (c) => `Seulement avec audio ${c}`,
       filterSubtitles: (c) => `Seulement avec sous-titres ${c}`,
       language: 'Langue du panneau',
+      compact: 'Afficher uniquement les icônes',
       hidden: 'Masqués',
       checking: 'vérification',
     },
@@ -166,6 +172,7 @@
       filterAudio: (c) => `Solo con audio ${c}`,
       filterSubtitles: (c) => `Solo con sottotitoli ${c}`,
       language: 'Lingua del pannello',
+      compact: 'Mostra solo le icone',
       hidden: 'Nascosti',
       checking: 'verifica',
     },
@@ -181,6 +188,7 @@
       filterAudio: (c) => `Jen s ${c} zvukem`,
       filterSubtitles: (c) => `Jen s ${c} titulky`,
       language: 'Jazyk panelu',
+      compact: 'Zobrazovat jen ikony',
       hidden: 'Skryto',
       checking: 'kontrola',
     },
@@ -238,7 +246,10 @@
     } catch (e) {
       // Storage unavailable - fall back to the browser's language.
     }
-    return { language: TRACK_LANGUAGES[saved.language] ? saved.language : browserLanguage() };
+    return {
+      language: TRACK_LANGUAGES[saved.language] ? saved.language : browserLanguage(),
+      compact: !!saved.compact,
+    };
   }
 
   function saveSettings() {
@@ -617,6 +628,7 @@
   }
 
   // A badge group: the extension's icon, a separator line and the three badges.
+  // Each badge's `data-icon` picks its icon in the simplified view (see content.css).
   function createBadgeGroup(variant) {
     const box = document.createElement('div');
     box.className = `apbs-badges ${variant}`;
@@ -624,16 +636,19 @@
     logo.className = 'apbs-logo';
     const list = document.createElement('span');
     list.className = 'apbs-badge-list';
-    list.append(
-      document.createElement('span'),
-      document.createElement('span'),
-      document.createElement('span'),
-    );
+    for (const icon of ['entitled', 'audio', 'subtitles']) {
+      const badge = document.createElement('span');
+      badge.dataset.icon = icon;
+      list.append(badge);
+    }
     box.append(logo, list);
     return box;
   }
 
+  // In the simplified view (`apbs-compact`) the badges show only an icon on their colour;
+  // the text stays in the DOM, hidden by content.css.
   function setBadges(box, entitled, status, subtitleStatus) {
+    setClass(box, 'apbs-compact', settings.compact);
     const badges = box.querySelector('.apbs-badge-list').children;
     if (entitled === null) {
       setBadge(badges[0], 'pending', texts.entitledUnknown);
@@ -694,8 +709,30 @@
     );
     const status = document.createElement('div');
     status.className = 'apbs-status';
-    panel.append(status);
+    // The least important setting goes last, below a separator line, with the icons' legend under it.
+    const legend = createLegend(code);
+    panel.append(status, createCompactCheckbox(legend), legend);
     document.body.append(panel);
+  }
+
+  // What each icon of the simplified view means, shown only while that view is on.
+  function createLegend(code) {
+    const legend = document.createElement('div');
+    legend.className = 'apbs-legend';
+    legend.hidden = !settings.compact;
+    const items = [
+      ['entitled', texts.entitled],
+      ['not-entitled', texts.notEntitled],
+      ['audio', texts.audio(code)],
+      ['subtitles', texts.subtitles(code)],
+    ];
+    for (const [icon, text] of items) {
+      const item = document.createElement('span');
+      item.dataset.icon = icon;
+      item.textContent = text;
+      legend.append(item);
+    }
+    return legend;
   }
 
   function createCheckbox(key, text) {
@@ -709,6 +746,23 @@
       scheduleUpdate();
     });
     label.append(input, document.createTextNode(text));
+    return label;
+  }
+
+  // The simplified view switch: icons only, without texts or the language code.
+  function createCompactCheckbox(legend) {
+    const label = document.createElement('label');
+    label.className = 'apbs-separated';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = settings.compact;
+    input.addEventListener('change', () => {
+      settings = { ...settings, compact: input.checked };
+      legend.hidden = !settings.compact;
+      saveSettings();
+      scheduleUpdate();
+    });
+    label.append(input, document.createTextNode(texts.compact));
     return label;
   }
 
@@ -726,7 +780,7 @@
     select.value = settings.language;
     select.setAttribute('aria-label', texts.language);
     select.addEventListener('change', () => {
-      settings = { language: select.value };
+      settings = { ...settings, language: select.value };
       texts = TEXTS[settings.language];
       saveSettings();
       panel.remove();
@@ -786,7 +840,7 @@
     }
     const entry = getEntry(id);
     const entitled = entry && typeof entry.entitled === 'boolean' ? entry.entitled : null;
-    setBadges(banner, entitled, getLanguageStatus(id, 'tracks'), getLanguageStatus(id, 'subtitles'));
+    setBadges(banner.querySelector('.apbs-badges'), entitled, getLanguageStatus(id, 'tracks'), getLanguageStatus(id, 'subtitles'));
   }
 
   function update() {

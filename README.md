@@ -16,7 +16,11 @@ A panel in the bottom-right corner can hide titles outside your subscription, ti
 
 Everything the extension adds to the page carries its icon, so it is clear what is not Prime Video's own: the panel has the icon and the name "Prime Video Better Search" in its header and a blue border, and the badges (including the large ones on a title's page) sit in a dark frame with the icon on the left, separated from them by a thin line. The icon is embedded in `content.css` as a data URI, so the extension needs no `web_accessible_resources`.
 
-Below the header, the panel has a **language picker** (PL, EN, DE, ES, FR, IT or CS). It sets both the language looked for in audio and subtitles and the language of the panel and badges. Until you pick one, the browser's language is used if it is on the list, otherwise Polish. The filter and language settings are remembered.
+Below the header, the panel has a **language picker** (PL, EN, DE, ES, FR, IT or CS). It sets both the language looked for in audio and subtitles and the language of the panel and badges. Until you pick one, the browser's language is used if it is on the list, otherwise Polish.
+
+At the bottom of the panel, below a separator line, the **"show icons only"** switch (simplified view) turns every badge (on cards and on a title's page) into a small coloured square with an icon only, without text or language code: a padlock for the subscription (open when included, closed when not), a speaker for audio, "CC" for subtitles. Green means yes, red means no, grey means not known yet. On cards the icons sit in a row. While the switch is on, a short legend of the icons is shown below it.
+
+The filter, language and simplified view settings are remembered.
 
 ## Installation
 

@@ -4,6 +4,15 @@
   --apbs-icon: url("data:image/png;base64,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");
 }
 
+/* Icons of the simplified view, white shapes used as masks (paths from Google's Material Icons, Apache 2.0):
+   a padlock for the subscription (open when included, closed when not), a speaker for audio, "CC" for subtitles. */
+:root {
+  --apbs-icon-entitled: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 17c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm6-9h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6h1.9c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm0 12H6V10h12v10z'/%3E%3C/svg%3E");
+  --apbs-icon-not-entitled: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E");
+  --apbs-icon-audio: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'/%3E%3C/svg%3E");
+  --apbs-icon-subtitles: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V13H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z'/%3E%3C/svg%3E");
+}
+
 /* A badge group: a dark frame with the extension's icon, a separator line and the badges. */
 .apbs-badges {
   display: flex;
@@ -141,6 +150,42 @@
   font-size: 12px;
 }
 
+/* A panel row set apart from the ones above by a thin line. */
+.apbs-panel .apbs-separated {
+  margin-top: 2px;
+  padding-top: 8px;
+  border-top: 1px solid #3d4c5c;
+}
+
+/* Legend of the simplified view's icons: white icons with their meaning, two per row. */
+.apbs-legend {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 3px 12px;
+  color: #aab7c4;
+  font-size: 12px;
+}
+
+.apbs-legend[hidden] {
+  display: none;
+}
+
+.apbs-legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.apbs-legend span::before {
+  content: "";
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  -webkit-mask: var(--apbs-badge-icon) center / contain no-repeat;
+  mask: var(--apbs-badge-icon) center / contain no-repeat;
+}
+
 .apbs-panel label.apbs-select {
   flex-direction: column;
   align-items: stretch;
@@ -189,4 +234,74 @@
   font-size: 22px;
   padding: 8px 16px;
   border-radius: 8px;
+}
+
+/* Simplified view: each badge is a coloured square with a white icon, the badges in a row.
+   The text stays in the DOM (for screen readers) but is not shown. */
+.apbs-compact .apbs-badge-list {
+  flex-direction: row;
+}
+
+.apbs-corner.apbs-compact .apbs-logo {
+  width: 20px;
+  height: 20px;
+}
+
+.apbs-compact .apbs-badge {
+  position: relative;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  font-size: 0;
+  line-height: 0;
+  overflow: hidden;
+}
+
+.apbs-compact .apbs-badge::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  background: #fff;
+  -webkit-mask: var(--apbs-badge-icon) center / contain no-repeat;
+  mask: var(--apbs-badge-icon) center / contain no-repeat;
+}
+
+.apbs-badge[data-icon="entitled"],
+.apbs-legend [data-icon="entitled"] {
+  --apbs-badge-icon: var(--apbs-icon-entitled);
+}
+
+.apbs-badge[data-icon="entitled"].apbs-no,
+.apbs-legend [data-icon="not-entitled"] {
+  --apbs-badge-icon: var(--apbs-icon-not-entitled);
+}
+
+.apbs-badge[data-icon="audio"],
+.apbs-legend [data-icon="audio"] {
+  --apbs-badge-icon: var(--apbs-icon-audio);
+}
+
+.apbs-badge[data-icon="subtitles"],
+.apbs-legend [data-icon="subtitles"] {
+  --apbs-badge-icon: var(--apbs-icon-subtitles);
+}
+
+.apbs-large.apbs-compact .apbs-badge {
+  width: 44px;
+  height: 44px;
+  font-size: 0;
+  padding: 0;
+}
+
+.apbs-large.apbs-compact .apbs-badge::before {
+  inset: 8px;
+}
+
+/* The "CC" sign is wide and flat, so it gets more of the square to stay legible. */
+.apbs-compact .apbs-badge[data-icon="subtitles"]::before {
+  inset: 0;
+}
+
+.apbs-large.apbs-compact .apbs-badge[data-icon="subtitles"]::before {
+  inset: 3px;
 }

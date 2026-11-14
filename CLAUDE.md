@@ -13,7 +13,7 @@
 
 ## Quick Reference
 
-**What it is**: a Chrome extension (Manifest V3) that adds "in my subscription" and "has audio" and "has subtitles" badges (language chosen from PL, EN, DE, ES, FR, IT, CS) plus filters to the title cards on Prime Video pages (search, home, movies, TV, genres, collections, watchlist, detail page carousels).
+**What it is**: a Chrome extension (Manifest V3) that adds "in my subscription" and "has audio" and "has subtitles" badges (language chosen from PL, EN, DE, ES, FR, IT, CS) plus filters and an icons-only simplified view to the title cards on Prime Video pages (search, home, movies, TV, genres, collections, watchlist, detail page carousels).
 **Tech**: plain JavaScript content script, no build step, only the `storage` permission (cache in `chrome.storage.local`). Loaded via "Load unpacked" in `chrome://extensions`.
 **Files**: `manifest.json`, `content.js` (all logic), `content.css` (badges + panel), `icons/` (extension icon, PNG 16/48/128: a magnifier with a play triangle).
 
