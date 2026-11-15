@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Prime Video Filters & Languages",
+  "version": "1",
+  "description": "Marks Prime Video titles that are included in your subscription and that have Polish audio, and lets you filter by both.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["https://www.primevideo.com/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
