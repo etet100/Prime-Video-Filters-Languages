@@ -14,9 +14,9 @@
 
 ## Quick Reference
 
-**What it is**: a Chrome extension (Manifest V3) that adds "in my subscription" and "has audio" and "has subtitles" badges (language chosen from PL, EN, DE, ES, FR, IT, CS) plus filters (hiding or greying out non-matching titles) and an icons-only simplified view to the title cards on Prime Video pages (search, home, movies, TV, genres, collections, watchlist, detail page carousels).
-**Tech**: plain JavaScript content script, no build step, only the `storage` permission (cache in `chrome.storage.local`). Loaded via "Load unpacked" in `chrome://extensions`.
-**Files**: `manifest.json`, `content.js` (all logic), `content.css` (badges + panel), `icons/` (extension icon, PNG 16/48/128: a magnifier with a play triangle), `.github/workflows/release.yml` (on a `v*` tag push: checks the tag against the manifest version, zips the extension files, creates a GitHub Release). A new file the extension needs at runtime must also be added to the `zip` command in that workflow. `images/` holds the screenshots used by `README.md`; it is not part of the extension and is not zipped.
+**What it is**: a Chrome extension (Manifest V3) that adds "in my subscription" and "has audio" and "has subtitles" badges (language chosen from PL, EN, DE, ES, FR, IT, CS) plus filters (hiding or greying out non-matching titles), an icons-only simplified view and a simple local "watch later" list ("watch later" button as a fourth badge, list in the panel) to the title cards on Prime Video pages (search, home, movies, TV, genres, collections, watchlist, detail page carousels).
+**Tech**: plain JavaScript content script, no build step, only the `storage` permission (cache and watch later list in `chrome.storage.local`). Loaded via "Load unpacked" in `chrome://extensions`.
+**Files**: `manifest.json`, `content.js` (all logic), `content.css` (badges + panel), `icons/` (extension icon, PNG 16/48/128: a magnifier with a play triangle), `.github/workflows/release.yml` (on a `v*` tag push: checks the tag against the manifest version, zips the extension files, creates a GitHub Release), `Makefile` (`help`, the default, lists the targets; `bump-version` raises the single-number version in the manifest, `create-release` tags and pushes `v<version>`). A new file the extension needs at runtime must also be added to the `zip` command in that workflow. `images/` holds the screenshots used by `README.md`; it is not part of the extension and is not zipped.
 
 ## Documentation
 
@@ -25,7 +25,7 @@
 - [docs/ANALYSIS.md](docs/ANALYSIS.md) - how the Prime Video pages were analysed (steps, tools, measurements)
 - [docs/PRIME_VIDEO_DATA.md](docs/PRIME_VIDEO_DATA.md) - reference of the page structure and data the extension relies on
 - [docs/DECISIONS.md](docs/DECISIONS.md) - decisions agreed with the user, and open questions
-- [docs/RELEASING.md](docs/RELEASING.md) - how to publish a release (version tag, GitHub Actions workflow)
+- [docs/RELEASING.md](docs/RELEASING.md) - how to publish a release (single-number version, Makefile targets, version tag, GitHub Actions workflow)
 
 ## Working with the live site
 

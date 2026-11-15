@@ -1,5 +1,5 @@
 # Builds the extension ZIP and publishes it as a GitHub Release
-# when a version tag (e.g. v0.1.0) is pushed.
+# when a version tag (e.g. v1) is pushed.
 name: Release
 
 on:

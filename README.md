@@ -40,9 +40,9 @@ Pick **EN, PL, DE, ES, FR, IT or CS**. It sets the language looked for in audio 
 
 ### Icons-only view
 
-Prefer a calmer page? The **"show icons only"** switch turns every badge into a small coloured square: a padlock for the subscription, a speaker for audio, "CC" for subtitles. Green means yes, red means no, grey means not known yet.
+Prefer a calmer page? The **"show icons only"** switch turns every badge into a small coloured square: a padlock for the subscription, a speaker for audio, "CC" for subtitles, and a bookmark (filled once saved) for watch later. Green means yes, red means no, grey means not known yet.
 
-![The same card in the normal view (left) and in the icons-only view (right)](images/icons-compare.png)
+![A card in the normal view, with the "+ Watch later" button below the badges](images/card-full.png) ![The same card in the icons-only view](images/card-icons.png)
 
 ### Details page banner
 
@@ -50,7 +50,15 @@ On a title's own page the same three checks appear as a large banner above the t
 
 ![The banner above the title art on a detail page](images/detail-banner.png)
 
-Your settings (filters, language, grey out, simplified view, collapsed panel) are remembered.
+### Watch later
+
+A **"+ Watch later"** button below the badges (on cards, posters, the top banner and a title's page; a bookmark in the icons-only view) saves the title to a simple "watch later" list. The list is shown in the panel: click a title to open its page, or "×" to remove it; clicking the button again removes it too.
+
+This feature is simple by design. Prime Video already has its own watchlist; this is just a very quick way to remember a title for a short while. The list is kept locally in your browser, not in your Prime Video account, so it does not show up on another computer or in another browser. Don't need it? Untick **"show the watch later list"** in the panel to hide the list and the buttons; your saved titles stay.
+
+![The panel with two titles on the watch later list](images/watch-later-panel.png)
+
+Your settings (filters, language, grey out, watch later on or off, simplified view, collapsed panel) and the watch later list are remembered.
 
 ## Installation
 

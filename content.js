@@ -15,6 +15,8 @@
 // A small panel lets the user hide titles that fail any of the checks, choose
 // the language (used for the audio and subtitles checks and for the panel's own texts)
 // and switch to a simplified view, where the badges show only icons.
+// A "watch later" button, the fourth badge, saves a title to a simple local "watch later" list,
+// which the panel shows with links to the titles.
 // When the detail requests mostly fail or an expected JSON field is never found, the panel
 // shows a warning that Prime Video probably changed (see findProblems).
 (() => {
@@ -66,6 +68,10 @@
   const FILTERS_KEY = 'apbs:filters';
   const MAX_PARALLEL_REQUESTS = 3;
   const SETTINGS_KEY = 'apbs:settings';
+  // The user's "watch later" list, also in chrome.storage.local, so every Prime Video tab
+  // shares it: one key holding [{id, title, time}], newest first. Not tied to the account.
+  const WATCH_LATER_KEY = 'apbs:watchLater';
+  const DETAIL_MAIN_SELECTOR = 'main[data-testid="detailpage-main"]';
   // Samples needed before the response statistics are trusted (see findProblems).
   const FAILURE_MIN_SAMPLE = 6;
   const MISSING_DATA_MIN_SAMPLE = 10;
@@ -101,6 +107,11 @@
       dim: 'Wyszarzaj zamiast ukrywać',
       collapse: 'Zwiń panel',
       expand: 'Rozwiń panel',
+      watchLaterToggle: 'Pokazuj listę do obejrzenia',
+      watchLater: 'Do obejrzenia',
+      watchLaterAdd: 'Dodaj do obejrzenia',
+      watchLaterRemove: 'Usuń z listy do obejrzenia',
+      watchLaterEmpty: 'Brak zapisanych tytułów',
       hidden: 'Ukryte',
       checking: 'sprawdzanie',
       warnRequests: 'Sprawdzanie często zawodzi - Prime Video jest niedostępne albo się zmieniło',
@@ -122,6 +133,11 @@
       dim: 'Grey out instead of hiding',
       collapse: 'Collapse panel',
       expand: 'Expand panel',
+      watchLaterToggle: 'Show the watch later list',
+      watchLater: 'Watch later',
+      watchLaterAdd: 'Add to watch later',
+      watchLaterRemove: 'Remove from watch later',
+      watchLaterEmpty: 'No saved titles',
       hidden: 'Hidden',
       checking: 'checking',
       warnRequests: 'Checks keep failing - Prime Video is unreachable or has changed',
@@ -143,6 +159,11 @@
       dim: 'Ausgrauen statt ausblenden',
       collapse: 'Panel einklappen',
       expand: 'Panel ausklappen',
+      watchLaterToggle: 'Liste „Später ansehen“ anzeigen',
+      watchLater: 'Später ansehen',
+      watchLaterAdd: 'Für später merken',
+      watchLaterRemove: 'Aus der Liste entfernen',
+      watchLaterEmpty: 'Keine gespeicherten Titel',
       hidden: 'Ausgeblendet',
       checking: 'Prüfung',
       warnRequests: 'Prüfungen schlagen oft fehl - Prime Video ist nicht erreichbar oder wurde geändert',
@@ -164,6 +185,11 @@
       dim: 'Atenuar en vez de ocultar',
       collapse: 'Contraer el panel',
       expand: 'Expandir el panel',
+      watchLaterToggle: 'Mostrar la lista para ver más tarde',
+      watchLater: 'Para ver más tarde',
+      watchLaterAdd: 'Guardar para ver más tarde',
+      watchLaterRemove: 'Quitar de la lista',
+      watchLaterEmpty: 'No hay títulos guardados',
       hidden: 'Ocultos',
       checking: 'comprobando',
       warnRequests: 'Las comprobaciones fallan a menudo - Prime Video no responde o ha cambiado',
@@ -185,6 +211,11 @@
       dim: 'Griser au lieu de masquer',
       collapse: 'Réduire le panneau',
       expand: 'Développer le panneau',
+      watchLaterToggle: 'Afficher la liste à regarder plus tard',
+      watchLater: 'À regarder plus tard',
+      watchLaterAdd: 'Ajouter à regarder plus tard',
+      watchLaterRemove: 'Retirer de la liste',
+      watchLaterEmpty: 'Aucun titre enregistré',
       hidden: 'Masqués',
       checking: 'vérification',
       warnRequests: 'Les vérifications échouent souvent - Prime Video est inaccessible ou a changé',
@@ -206,6 +237,11 @@
       dim: 'In grigio invece di nascondere',
       collapse: 'Comprimi il pannello',
       expand: 'Espandi il pannello',
+      watchLaterToggle: 'Mostra la lista Da guardare',
+      watchLater: 'Da guardare',
+      watchLaterAdd: 'Aggiungi a Da guardare',
+      watchLaterRemove: 'Rimuovi dalla lista',
+      watchLaterEmpty: 'Nessun titolo salvato',
       hidden: 'Nascosti',
       checking: 'verifica',
       warnRequests: 'I controlli falliscono spesso - Prime Video non è raggiungibile o è cambiato',
@@ -227,6 +263,11 @@
       dim: 'Zašednout místo skrytí',
       collapse: 'Sbalit panel',
       expand: 'Rozbalit panel',
+      watchLaterToggle: 'Zobrazovat seznam ke zhlédnutí',
+      watchLater: 'Ke zhlédnutí',
+      watchLaterAdd: 'Přidat ke zhlédnutí',
+      watchLaterRemove: 'Odebrat ze seznamu',
+      watchLaterEmpty: 'Žádné uložené tituly',
       hidden: 'Skryto',
       checking: 'kontrola',
       warnRequests: 'Kontroly často selhávají - Prime Video je nedostupné nebo se změnilo',
@@ -263,6 +304,11 @@
   let texts = TEXTS[settings.language];
   let panel = null;
   let scheduled = false;
+  // The "watch later" list, and whether the panel's copy of it must be redrawn. The panel
+  // is redrawn only on a change: it is inside the observed body, so redrawing it on every
+  // update would never let the MutationObserver settle.
+  let watchLater = [];
+  let watchLaterChanged = true;
 
   const nearObserver = new IntersectionObserver((entries) => trackCards(entries, nearCards), {
     rootMargin: '200px',
@@ -301,6 +347,8 @@
       compact: !!saved.compact,
       dim: !!saved.dim,
       collapsed: !!saved.collapsed,
+      // The "watch later" feature is on unless the user turned it off.
+      watchLater: saved.watchLater !== false,
     };
   }
 
@@ -364,13 +412,56 @@
     }
   }
 
-  // Titles fetched in another Prime Video tab become known here too.
+  // Keeps only well-formed entries of a stored "watch later" list.
+  function readWatchLater(value) {
+    return Array.isArray(value) ? value.filter((item) => item && typeof item.id === 'string') : [];
+  }
+
+  async function loadWatchLater() {
+    try {
+      const saved = await chrome.storage.local.get(WATCH_LATER_KEY);
+      watchLater = readWatchLater(saved[WATCH_LATER_KEY]);
+    } catch (e) {
+      console.warn('[Prime Video Filters & Languages] watch later list could not be loaded:', e);
+    }
+  }
+
+  function isWatchLater(id) {
+    return watchLater.some((item) => item.id === id);
+  }
+
+  // Adds the title at the top of the list, or removes it if it is already there.
+  function toggleWatchLater(id, title) {
+    if (isWatchLater(id)) {
+      watchLater = watchLater.filter((item) => item.id !== id);
+    } else {
+      watchLater = [{ id, title, time: Date.now() }, ...watchLater];
+    }
+    watchLaterChanged = true;
+    try {
+      chrome.storage.local.set({ [WATCH_LATER_KEY]: watchLater }).catch((e) => {
+        console.warn('[Prime Video Filters & Languages] watch later list could not be saved:', e);
+      });
+    } catch (e) {
+      // The extension was reloaded while this tab stayed open - the storage is not reachable.
+    }
+    scheduleUpdate();
+  }
+
+  // Titles fetched in another Prime Video tab become known here too, and so do
+  // changes to the "watch later" list.
   function onStorageChanged(changes, area) {
     if (area !== 'local') {
       return;
     }
     let changed = false;
     for (const [key, change] of Object.entries(changes)) {
+      if (key === WATCH_LATER_KEY) {
+        watchLater = readWatchLater(change.newValue);
+        watchLaterChanged = true;
+        changed = true;
+        continue;
+      }
       if (!key.startsWith(CACHE_PREFIX)) {
         continue;
       }
@@ -609,6 +700,20 @@
     return match ? match[1] : null;
   }
 
+  // The title's name, for the "watch later" list: from a card or from the detail page's
+  // main element. Regular cards have `data-card-title`; the other places are tried in turn.
+  function getTitleName(root) {
+    const titleArt = root.querySelector('[data-testid="title-art"]');
+    const candidates = [
+      root.getAttribute('data-card-title'),
+      titleArt?.querySelector('img[alt]')?.getAttribute('alt'),
+      titleArt?.textContent,
+      root.querySelector('a[aria-label]')?.getAttribute('aria-label'),
+      root.querySelector('img[alt]')?.getAttribute('alt'),
+    ];
+    return candidates.map((text) => (text || '').trim()).find((text) => text !== '') || '';
+  }
+
   // Returns true / false, or null when the status is not known yet.
   function getEntitlement(card, kind, id) {
     if (kind.domEntitlement) {
@@ -649,7 +754,7 @@
 
     const status = getLanguageStatus(id, 'tracks');
     const subtitleStatus = getLanguageStatus(id, 'subtitles');
-    renderBadges(card, kind, entitled, status, subtitleStatus);
+    renderBadges(card, kind, id, entitled, status, subtitleStatus);
 
     if (kind.hideable) {
       const hidden = (filters.entitled && entitled === false) || (filters.audio && status === 'no') ||
@@ -713,7 +818,7 @@
     }
   }
 
-  function renderBadges(card, kind, entitled, status, subtitleStatus) {
+  function renderBadges(card, kind, id, entitled, status, subtitleStatus) {
     const host = card.querySelector(kind.badgeHost);
     if (!host) {
       return;
@@ -724,9 +829,12 @@
       host.append(box);
     }
     setBadges(box, entitled, status, subtitleStatus);
+    setWatchLaterButton(box, id);
   }
 
-  // A badge group: the extension's icon, a separator line and the three badges.
+  // A badge group: the extension's icon, a separator line, the three badges and, as a
+  // fourth badge, the "watch later" button (see onWatchLaterClick): a text in the full view,
+  // a bookmark in the simplified view.
   // Each badge's `data-icon` picks its icon in the simplified view (see content.css).
   function createBadgeGroup(variant) {
     const box = document.createElement('div');
@@ -740,8 +848,51 @@
       badge.dataset.icon = icon;
       list.append(badge);
     }
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.className = 'apbs-badge apbs-save';
+    list.append(save);
     box.append(logo, list);
     return box;
+  }
+
+  // Shows whether the title is on the "watch later" list ("+" or "✓" before the list's name),
+  // or hides the button while the feature is turned off. The tooltip says what a click does.
+  // Only touches the DOM when something changed.
+  function setWatchLaterButton(box, id) {
+    const button = box.querySelector('.apbs-save');
+    if (button.hidden === settings.watchLater) {
+      button.hidden = !settings.watchLater;
+    }
+    const saved = isWatchLater(id);
+    const text = saved ? texts.watchLaterRemove : texts.watchLaterAdd;
+    const label = `${saved ? '✓' : '+'} ${texts.watchLater}`;
+    if (button.textContent !== label) {
+      button.textContent = label;
+    }
+    if (button.dataset.id !== id) {
+      button.dataset.id = id;
+    }
+    if (button.getAttribute('aria-pressed') !== String(saved)) {
+      button.setAttribute('aria-pressed', String(saved));
+    }
+    if (button.title !== text) {
+      button.title = text;
+      button.setAttribute('aria-label', text);
+    }
+  }
+
+  // Clicks on a "watch later" button. Listened to on `window` in the capture phase, so the
+  // click is stopped before it reaches the card's link or Prime Video's own handlers.
+  function onWatchLaterClick(event) {
+    const button = event.target instanceof Element ? event.target.closest('.apbs-save') : null;
+    if (!button) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const root = button.closest(`${ALL_CARDS_SELECTOR}, ${DETAIL_MAIN_SELECTOR}`);
+    toggleWatchLater(button.dataset.id, root ? getTitleName(root) : '');
   }
 
   // In the simplified view (`apbs-compact`) the badges show only an icon on their colour;
@@ -816,10 +967,62 @@
     warning.hidden = true;
     const status = document.createElement('div');
     status.className = 'apbs-status';
+    // The "watch later" list, below a separator line, shown while the feature is on.
+    const watchLaterSection = document.createElement('div');
+    watchLaterSection.className = 'apbs-watch-later apbs-separated';
+    watchLaterSection.hidden = !settings.watchLater;
+    const watchLaterTitle = document.createElement('div');
+    watchLaterTitle.className = 'apbs-watch-later-title';
+    const watchLaterList = document.createElement('ul');
+    watchLaterSection.append(watchLaterTitle, watchLaterList);
+    watchLaterChanged = true;
     // The least important settings go last, below a separator line, with the icons' legend under them.
     const legend = createLegend(code);
-    panel.append(warning, status, createDimCheckbox(), createCompactCheckbox(legend), legend);
+    panel.append(
+      warning,
+      status,
+      watchLaterSection,
+      createDimCheckbox(),
+      createWatchLaterCheckbox(watchLaterSection),
+      createCompactCheckbox(legend),
+      legend,
+    );
     document.body.append(panel);
+  }
+
+  // Redraws the panel's "watch later" list, only after the list changed (see watchLaterChanged).
+  // Each title links to its page and has a "×" button that removes it.
+  function renderWatchLater() {
+    const section = panel && panel.querySelector('.apbs-watch-later');
+    if (!section || !watchLaterChanged) {
+      return;
+    }
+    watchLaterChanged = false;
+    section.querySelector('.apbs-watch-later-title').textContent = `${texts.watchLater} (${watchLater.length})`;
+    const list = section.querySelector('ul');
+    list.replaceChildren();
+    if (watchLater.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'apbs-watch-later-empty';
+      empty.textContent = texts.watchLaterEmpty;
+      list.append(empty);
+    }
+    for (const item of watchLater) {
+      const row = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = `/detail/${encodeURIComponent(item.id)}`;
+      link.textContent = item.title || item.id;
+      link.title = link.textContent;
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      // The "×" is drawn by content.css, so it is centred exactly whatever the font.
+      remove.className = 'apbs-remove';
+      remove.title = texts.watchLaterRemove;
+      remove.setAttribute('aria-label', texts.watchLaterRemove);
+      remove.addEventListener('click', () => toggleWatchLater(item.id, item.title));
+      row.append(link, remove);
+      list.append(row);
+    }
   }
 
   // A button that collapses the panel to the extension's icon or expands it again; the state is remembered.
@@ -884,6 +1087,23 @@
       scheduleUpdate();
     });
     label.append(input, document.createTextNode(texts.dim));
+    return label;
+  }
+
+  // The "watch later" switch: off, the panel's list and the bookmark buttons are hidden.
+  // The saved list itself is kept.
+  function createWatchLaterCheckbox(section) {
+    const label = document.createElement('label');
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = settings.watchLater;
+    input.addEventListener('change', () => {
+      settings = { ...settings, watchLater: input.checked };
+      section.hidden = !settings.watchLater;
+      saveSettings();
+      scheduleUpdate();
+    });
+    label.append(input, document.createTextNode(texts.watchLaterToggle));
     return label;
   }
 
@@ -1001,7 +1221,9 @@
     }
     const entry = getEntry(id);
     const entitled = entry && typeof entry.entitled === 'boolean' ? entry.entitled : null;
-    setBadges(banner.querySelector('.apbs-badges'), entitled, getLanguageStatus(id, 'tracks'), getLanguageStatus(id, 'subtitles'));
+    const box = banner.querySelector('.apbs-badges');
+    setBadges(box, entitled, getLanguageStatus(id, 'tracks'), getLanguageStatus(id, 'subtitles'));
+    setWatchLaterButton(box, id);
   }
 
   function update() {
@@ -1024,6 +1246,7 @@
     ensurePanel();
     cards.forEach(processCard);
     updatePanelStatus();
+    renderWatchLater();
   }
 
   function scheduleUpdate() {
@@ -1034,8 +1257,9 @@
   }
 
   async function start() {
-    await loadCache();
+    await Promise.all([loadCache(), loadWatchLater()]);
     chrome.storage.onChanged.addListener(onStorageChanged);
+    window.addEventListener('click', onWatchLaterClick, true);
     // Prime Video is a single-page app: cards load lazily and get re-rendered,
     // so re-apply badges whenever the DOM changes.
     new MutationObserver(scheduleUpdate).observe(document.body, { childList: true, subtree: true });

@@ -1,6 +1,6 @@
 # How it works
 
-The extension is a single content script (`content.js` + `content.css`), with no build step. Its icon (a magnifier with a play triangle) is in `icons/`. Its only permission is `storage`, for the cache.
+The extension is a single content script (`content.js` + `content.css`), with no build step. Its icon (a magnifier with a play triangle) is in `icons/`. Its only permission is `storage`, for the cache and the "watch later" list.
 
 ## Where the checks come from
 
@@ -30,7 +30,8 @@ The extension is a single content script (`content.js` + `content.css`), with no
 - **Simplified view**: every badge becomes a small coloured square with an icon only: a padlock for the subscription (open when included, closed when not), a speaker for audio, "CC" for subtitles. Green means yes, red means no, grey means not known yet.
 - **While a video plays**, the panel is hidden (the player opens on top of the page, whose cards stay in the DOM), and it comes back when the player is closed.
 - **Collapsing the panel**: the minus button in the panel header shrinks the panel to a small square with the extension's icon; a click on the icon expands it again. The filters keep working while the panel is collapsed, but its hidden count and its warning are not visible.
-- The filter, language, grey out, simplified view and collapsed panel settings are remembered.
+- **Watch later**: every badge group (cards, super carousel posters, the top banner, the title page banner) ends with a "watch later" button as its fourth badge: "+ <list name>" with an outline when the title is not saved, "✓ <list name>" on blue when it is; in the simplified view a square with a bookmark, outlined or filled. A click adds the title to the top of the list or removes it. The click is caught on `window` in the capture phase and stopped, so it does not open the card's link. The panel shows the list below the status line: the count, then each title as a link to `/detail/<id>` with a "×" that removes it; long titles are cut and a long list scrolls. The list is stored in `chrome.storage.local` under one key, `apbs:watchLater` (`[{id, title, time}]`, newest first), so every Prime Video tab shows a change at once. It is local to the browser and not tied to the Prime Video account or its own watchlist. The title's name is read from the card (`data-card-title` on regular cards; otherwise the title art's image `alt` or text, a link's `aria-label` or an image's `alt`); if none is found, the list shows the detail id. The feature is on by default; the "show the watch later list" checkbox (below "grey out instead of hiding") turns it off, which hides the panel's list and every "watch later" button but keeps the saved list.
+- The filter, language, grey out, watch later on/off, simplified view and collapsed panel settings are remembered.
 
 ## When Prime Video changes
 

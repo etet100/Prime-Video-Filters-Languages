@@ -11,6 +11,11 @@
   --apbs-icon-not-entitled: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E");
   --apbs-icon-audio: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z'/%3E%3C/svg%3E");
   --apbs-icon-subtitles: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 4H5c-1.11 0-2 .9-2 2v12c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1zm7 0h-1.5v-.5h-2v3h2V13H18v1c0 .55-.45 1-1 1h-3c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1h3c.55 0 1 .45 1 1v1z'/%3E%3C/svg%3E");
+  /* The "watch later" button in the simplified view: a bookmark, outlined when the title is not saved, filled when it is. */
+  --apbs-icon-save: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z'/%3E%3C/svg%3E");
+  --apbs-icon-saved: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E");
+  /* The "×" that removes a title from the panel's watch later list. */
+  --apbs-icon-remove: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E");
 }
 
 /* A badge group: a dark frame with the extension's icon, a separator line and the badges. */
@@ -85,6 +90,43 @@
 
 .apbs-pending {
   background: rgba(60, 60, 60, 0.85);
+}
+
+/* The "watch later" button, the fourth badge: outlined while the title is not saved ("+ ..."),
+   filled with Prime Video blue once it is ("✓ ..."), so it does not look like a grey "not known yet"
+   badge. In the simplified view it becomes a square with a bookmark, outlined or filled, through the
+   same rules as the other badges. The group ignores the pointer, the button does not.
+   The 1px border replaces 1px of the badge padding, so it is as tall as the other badges. */
+.apbs-badge.apbs-save {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  --apbs-badge-icon: var(--apbs-icon-save);
+}
+
+.apbs-badge.apbs-save[aria-pressed="true"] {
+  border-color: #00a8e1;
+  background: #00a8e1;
+  --apbs-badge-icon: var(--apbs-icon-saved);
+}
+
+.apbs-badge.apbs-save:hover {
+  border-color: #fff;
+}
+
+.apbs-large .apbs-badge.apbs-save {
+  padding: 7px 15px;
+}
+
+/* Hidden while the "watch later" feature is turned off in the panel. */
+.apbs-save[hidden],
+.apbs-watch-later[hidden] {
+  display: none;
 }
 
 .apbs-hidden {
@@ -243,6 +285,74 @@ body:has(#dv-web-player.dv-player-fullscreen) .apbs-panel {
   margin-top: 2px;
   padding-top: 8px;
   border-top: 1px solid #3d4c5c;
+}
+
+/* The "watch later" list: a heading with the count, then one row per title (a link and a
+   "×" that removes it), newest first. Long titles are cut, a long list scrolls. */
+.apbs-watch-later-title {
+  font-weight: 600;
+}
+
+.apbs-watch-later ul {
+  max-width: 240px;
+  max-height: 180px;
+  overflow-y: auto;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.apbs-watch-later li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.apbs-watch-later a {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.apbs-watch-later a:hover {
+  color: #00a8e1;
+  text-decoration: underline;
+}
+
+.apbs-remove {
+  flex: none;
+  position: relative;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid #3d4c5c;
+  border-radius: 4px;
+  background: #2a3745;
+  cursor: pointer;
+}
+
+/* The "×" is a mask (Material Icons "close"), centred exactly whatever the font. */
+.apbs-remove::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  background: #fff;
+  -webkit-mask: var(--apbs-icon-remove) center / contain no-repeat;
+  mask: var(--apbs-icon-remove) center / contain no-repeat;
+}
+
+.apbs-remove:hover {
+  border-color: #00a8e1;
+}
+
+.apbs-watch-later-empty {
+  color: #aab7c4;
+  font-size: 12px;
 }
 
 /* Legend of the simplified view's icons: white icons with their meaning, two per row. */
