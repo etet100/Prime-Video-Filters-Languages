@@ -27,7 +27,8 @@
   //   badgeHost  - the element the badges are appended to,
   //   inline     - badges flow with the content instead of sitting on the image,
   //   domEntitlement - the card carries its subscription status in the DOM,
-  //   hideable   - the filters may hide the card.
+  //   hideable   - the filters may hide the card, and a title the user hid disappears
+  //                (a card that is not hideable gets covered instead, see setCovered).
   const CARD_KINDS = [
     {
       // Regular cards: search results, carousels and grids on all pages.
@@ -60,6 +61,7 @@
     },
   ];
   const ALL_CARDS_SELECTOR = CARD_KINDS.map((kind) => kind.selector).join(', ');
+  const HERO_KIND = CARD_KINDS.find((kind) => kind.selector.includes('top-hero-card'));
 
   // Detail data is cached in the extension's storage (chrome.storage.local),
   // one key per title: `audio:<detail id>` -> {tracks, subtitles, entitled, time}.
@@ -71,7 +73,15 @@
   // The user's "watch later" list, also in chrome.storage.local, so every Prime Video tab
   // shares it: one key holding [{id, title, time}], newest first. Not tied to the account.
   const WATCH_LATER_KEY = 'apbs:watchLater';
+  // Titles the user hid, in the same shape and storage: [{id, title, time}], newest first.
+  const HIDDEN_KEY = 'apbs:hidden';
   const DETAIL_MAIN_SELECTOR = 'main[data-testid="detailpage-main"]';
+  // On a title's own page, the element covered when the user hid the title: the large
+  // preview at the top (image, title art, synopsis, buttons), above the episodes and details.
+  const DETAIL_COVER_SELECTOR = '.DVWebNode-detail-atf-wrapper';
+  // How many hidden titles in a row the top banner may skip (see skipHiddenHeroTitle), so it
+  // does not spin forever when all its titles are hidden.
+  const HERO_MAX_SKIPS = 30;
   // Samples needed before the response statistics are trusted (see findProblems).
   const FAILURE_MIN_SAMPLE = 6;
   const MISSING_DATA_MIN_SAMPLE = 10;
@@ -112,6 +122,17 @@
       watchLaterAdd: 'Dodaj do obejrzenia',
       watchLaterRemove: 'Usuń z listy do obejrzenia',
       watchLaterEmpty: 'Brak zapisanych tytułów',
+      hide: 'Ukryj',
+      hideTitle: 'Ukryj ten tytuł',
+      unhide: 'Przywróć',
+      unhideTitle: 'Przywróć ten tytuł',
+      hiddenList: 'Ukryte przez Ciebie',
+      manage: 'Zarządzaj',
+      search: 'Szukaj',
+      hiddenEmpty: 'Brak ukrytych tytułów',
+      noMatches: 'Nic nie znaleziono',
+      close: 'Zamknij',
+      covered: 'Tytuł ukryty',
       hidden: 'Ukryte',
       checking: 'sprawdzanie',
       warnRequests: 'Sprawdzanie często zawodzi - Prime Video jest niedostępne albo się zmieniło',
@@ -138,6 +159,17 @@
       watchLaterAdd: 'Add to watch later',
       watchLaterRemove: 'Remove from watch later',
       watchLaterEmpty: 'No saved titles',
+      hide: 'Hide',
+      hideTitle: 'Hide this title',
+      unhide: 'Unhide',
+      unhideTitle: 'Unhide this title',
+      hiddenList: 'Hidden by you',
+      manage: 'Manage',
+      search: 'Search',
+      hiddenEmpty: 'No hidden titles',
+      noMatches: 'No matches',
+      close: 'Close',
+      covered: 'Hidden title',
       hidden: 'Hidden',
       checking: 'checking',
       warnRequests: 'Checks keep failing - Prime Video is unreachable or has changed',
@@ -164,6 +196,17 @@
       watchLaterAdd: 'Für später merken',
       watchLaterRemove: 'Aus der Liste entfernen',
       watchLaterEmpty: 'Keine gespeicherten Titel',
+      hide: 'Ausblenden',
+      hideTitle: 'Diesen Titel ausblenden',
+      unhide: 'Einblenden',
+      unhideTitle: 'Diesen Titel wieder einblenden',
+      hiddenList: 'Von dir ausgeblendet',
+      manage: 'Verwalten',
+      search: 'Suchen',
+      hiddenEmpty: 'Keine ausgeblendeten Titel',
+      noMatches: 'Keine Treffer',
+      close: 'Schließen',
+      covered: 'Ausgeblendeter Titel',
       hidden: 'Ausgeblendet',
       checking: 'Prüfung',
       warnRequests: 'Prüfungen schlagen oft fehl - Prime Video ist nicht erreichbar oder wurde geändert',
@@ -190,6 +233,17 @@
       watchLaterAdd: 'Guardar para ver más tarde',
       watchLaterRemove: 'Quitar de la lista',
       watchLaterEmpty: 'No hay títulos guardados',
+      hide: 'Ocultar',
+      hideTitle: 'Ocultar este título',
+      unhide: 'Mostrar',
+      unhideTitle: 'Volver a mostrar este título',
+      hiddenList: 'Ocultados por ti',
+      manage: 'Gestionar',
+      search: 'Buscar',
+      hiddenEmpty: 'No hay títulos ocultos',
+      noMatches: 'Sin resultados',
+      close: 'Cerrar',
+      covered: 'Título oculto',
       hidden: 'Ocultos',
       checking: 'comprobando',
       warnRequests: 'Las comprobaciones fallan a menudo - Prime Video no responde o ha cambiado',
@@ -216,6 +270,17 @@
       watchLaterAdd: 'Ajouter à regarder plus tard',
       watchLaterRemove: 'Retirer de la liste',
       watchLaterEmpty: 'Aucun titre enregistré',
+      hide: 'Masquer',
+      hideTitle: 'Masquer ce titre',
+      unhide: 'Réafficher',
+      unhideTitle: 'Réafficher ce titre',
+      hiddenList: 'Masqués par vous',
+      manage: 'Gérer',
+      search: 'Rechercher',
+      hiddenEmpty: 'Aucun titre masqué',
+      noMatches: 'Aucun résultat',
+      close: 'Fermer',
+      covered: 'Titre masqué',
       hidden: 'Masqués',
       checking: 'vérification',
       warnRequests: 'Les vérifications échouent souvent - Prime Video est inaccessible ou a changé',
@@ -242,6 +307,17 @@
       watchLaterAdd: 'Aggiungi a Da guardare',
       watchLaterRemove: 'Rimuovi dalla lista',
       watchLaterEmpty: 'Nessun titolo salvato',
+      hide: 'Nascondi',
+      hideTitle: 'Nascondi questo titolo',
+      unhide: 'Mostra',
+      unhideTitle: 'Mostra di nuovo questo titolo',
+      hiddenList: 'Nascosti da te',
+      manage: 'Gestisci',
+      search: 'Cerca',
+      hiddenEmpty: 'Nessun titolo nascosto',
+      noMatches: 'Nessun risultato',
+      close: 'Chiudi',
+      covered: 'Titolo nascosto',
       hidden: 'Nascosti',
       checking: 'verifica',
       warnRequests: 'I controlli falliscono spesso - Prime Video non è raggiungibile o è cambiato',
@@ -268,6 +344,17 @@
       watchLaterAdd: 'Přidat ke zhlédnutí',
       watchLaterRemove: 'Odebrat ze seznamu',
       watchLaterEmpty: 'Žádné uložené tituly',
+      hide: 'Skrýt',
+      hideTitle: 'Skrýt tento titul',
+      unhide: 'Zobrazit',
+      unhideTitle: 'Znovu zobrazit tento titul',
+      hiddenList: 'Vámi skryté',
+      manage: 'Spravovat',
+      search: 'Hledat',
+      hiddenEmpty: 'Žádné skryté tituly',
+      noMatches: 'Nic nenalezeno',
+      close: 'Zavřít',
+      covered: 'Skrytý titul',
       hidden: 'Skryto',
       checking: 'kontrola',
       warnRequests: 'Kontroly často selhávají - Prime Video je nedostupné nebo se změnilo',
@@ -309,6 +396,16 @@
   // update would never let the MutationObserver settle.
   let watchLater = [];
   let watchLaterChanged = true;
+  // The titles the user hid (may grow to hundreds, so looked up through a Set of ids), and
+  // whether the panel's count and the hidden titles window must be redrawn (same reason).
+  let hiddenTitles = [];
+  let hiddenIds = new Set();
+  let hiddenChanged = true;
+  // The top banner's rotation (see skipHiddenHeroTitle): the active title's index, and the
+  // "<index>:<id>" of the hidden title skipped last with how many were skipped in a row.
+  let heroIndex = null;
+  let heroSkippedFrom = null;
+  let heroSkips = 0;
 
   const nearObserver = new IntersectionObserver((entries) => trackCards(entries, nearCards), {
     rootMargin: '200px',
@@ -412,18 +509,46 @@
     }
   }
 
-  // Keeps only well-formed entries of a stored "watch later" list.
-  function readWatchLater(value) {
+  // Keeps only well-formed entries of a stored title list ("watch later" or hidden titles).
+  function readTitleList(value) {
     return Array.isArray(value) ? value.filter((item) => item && typeof item.id === 'string') : [];
   }
 
-  async function loadWatchLater() {
+  async function loadLists() {
     try {
-      const saved = await chrome.storage.local.get(WATCH_LATER_KEY);
-      watchLater = readWatchLater(saved[WATCH_LATER_KEY]);
+      const saved = await chrome.storage.local.get([WATCH_LATER_KEY, HIDDEN_KEY]);
+      watchLater = readTitleList(saved[WATCH_LATER_KEY]);
+      setHiddenTitles(readTitleList(saved[HIDDEN_KEY]));
     } catch (e) {
-      console.warn('[Prime Video Filters & Languages] watch later list could not be loaded:', e);
+      console.warn('[Prime Video Filters & Languages] saved lists could not be loaded:', e);
     }
+  }
+
+  function setHiddenTitles(list) {
+    hiddenTitles = list;
+    hiddenIds = new Set(list.map((item) => item.id));
+    hiddenChanged = true;
+  }
+
+  function isHidden(id) {
+    return hiddenIds.has(id);
+  }
+
+  // Hides the title (adds it at the top of the list), or shows it again if it is hidden.
+  function toggleHidden(id, title) {
+    if (isHidden(id)) {
+      setHiddenTitles(hiddenTitles.filter((item) => item.id !== id));
+    } else {
+      setHiddenTitles([{ id, title, time: Date.now() }, ...hiddenTitles]);
+    }
+    try {
+      chrome.storage.local.set({ [HIDDEN_KEY]: hiddenTitles }).catch((e) => {
+        console.warn('[Prime Video Filters & Languages] hidden titles could not be saved:', e);
+      });
+    } catch (e) {
+      // The extension was reloaded while this tab stayed open - the storage is not reachable.
+    }
+    scheduleUpdate();
   }
 
   function isWatchLater(id) {
@@ -449,7 +574,7 @@
   }
 
   // Titles fetched in another Prime Video tab become known here too, and so do
-  // changes to the "watch later" list.
+  // changes to the "watch later" list and the hidden titles.
   function onStorageChanged(changes, area) {
     if (area !== 'local') {
       return;
@@ -457,8 +582,13 @@
     let changed = false;
     for (const [key, change] of Object.entries(changes)) {
       if (key === WATCH_LATER_KEY) {
-        watchLater = readWatchLater(change.newValue);
+        watchLater = readTitleList(change.newValue);
         watchLaterChanged = true;
+        changed = true;
+        continue;
+      }
+      if (key === HIDDEN_KEY) {
+        setHiddenTitles(readTitleList(change.newValue));
         changed = true;
         continue;
       }
@@ -627,12 +757,15 @@
     if (pageId) {
       wanted.add(pageId);
     }
-    for (const info of cards) {
+    // Cards the user hid are not shown at all, so they need no data (an empty slot in a
+    // virtualized grid still counts as near the screen).
+    const shown = cards.filter((info) => !isRemovedByUser(info));
+    for (const info of shown) {
       if (nearCards.has(info.card)) {
         wanted.add(info.id);
       }
     }
-    for (const info of cards) {
+    for (const info of shown) {
       if (aheadCards.has(info.card) && filtersNeedDetail(info)) {
         wanted.add(info.id);
       }
@@ -700,14 +833,18 @@
     return match ? match[1] : null;
   }
 
-  // The title's name, for the "watch later" list: from a card or from the detail page's
-  // main element. Regular cards have `data-card-title`; the other places are tried in turn.
+  // The title's name, for the "watch later" list and the hidden titles: from a card or from
+  // the detail page's main element. Regular cards have `data-card-title`; the other places are
+  // tried in turn. A title page has the name as the title art's image `alt` or, when it has
+  // no title art, as the text of its `h1` (checked before the links' `aria-label`, as its
+  // first one is the trailer button's "Obejrzyj zwiastun").
   function getTitleName(root) {
     const titleArt = root.querySelector('[data-testid="title-art"]');
     const candidates = [
       root.getAttribute('data-card-title'),
       titleArt?.querySelector('img[alt]')?.getAttribute('alt'),
       titleArt?.textContent,
+      root.querySelector('h1')?.textContent,
       root.querySelector('a[aria-label]')?.getAttribute('aria-label'),
       root.querySelector('img[alt]')?.getAttribute('alt'),
     ];
@@ -747,6 +884,12 @@
     return kind.hideable && (filters.audio || filters.subtitles || (filters.entitled && entitled === null));
   }
 
+  // A title the user hid always disappears from a card that can be hidden (whatever the
+  // grey out setting); the top banner, which cannot, gets covered instead (see setCovered).
+  function isRemovedByUser({ kind, id }) {
+    return kind.hideable && isHidden(id);
+  }
+
   function processCard(info) {
     const { card, kind, id, entitled } = info;
     nearObserver.observe(card);
@@ -756,15 +899,21 @@
     const subtitleStatus = getLanguageStatus(id, 'subtitles');
     renderBadges(card, kind, id, entitled, status, subtitleStatus);
 
+    if (!kind.hideable) {
+      setCovered(card, isHidden(id));
+    }
     if (kind.hideable) {
-      const hidden = (filters.entitled && entitled === false) || (filters.audio && status === 'no') ||
+      const userHidden = isRemovedByUser(info);
+      const failed = (filters.entitled && entitled === false) || (filters.audio && status === 'no') ||
         (filters.subtitles && subtitleStatus === 'no');
+      const hidden = userHidden || failed;
       // A card the filters cannot decide on yet is dimmed until its check finishes.
       // A failed check counts as finished, so the card does not stay dimmed.
       const unchecked = !hidden && filtersNeedDetail(info) && !getEntry(id) && pending.get(id) !== 'error';
-      // With the grey out setting on, a failing card stays in place, greyed out, instead of being hidden.
-      const dimmed = hidden && settings.dim;
-      const removed = hidden && !settings.dim;
+      // With the grey out setting on, a card failing a filter stays in place, greyed out,
+      // instead of being hidden. A card the user hid is removed anyway.
+      const dimmed = !userHidden && failed && settings.dim;
+      const removed = userHidden || (failed && !settings.dim);
       const virtual = isVirtualGrid(card);
       setClass(getHideTarget(card), 'apbs-hidden', removed && !virtual);
       setClass(card, 'apbs-empty-slot', removed && virtual);
@@ -830,11 +979,12 @@
     }
     setBadges(box, entitled, status, subtitleStatus);
     setWatchLaterButton(box, id);
+    setHideButton(box, id);
   }
 
-  // A badge group: the extension's icon, a separator line, the three badges and, as a
-  // fourth badge, the "watch later" button (see onWatchLaterClick): a text in the full view,
-  // a bookmark in the simplified view.
+  // A badge group: the extension's icon, a separator line, the three badges, as a fourth
+  // badge the "watch later" button and as a fifth the "hide" button (see onBadgeButtonClick):
+  // texts in the full view, a bookmark and an eye in the simplified view.
   // Each badge's `data-icon` picks its icon in the simplified view (see content.css).
   function createBadgeGroup(variant) {
     const box = document.createElement('div');
@@ -851,7 +1001,10 @@
     const save = document.createElement('button');
     save.type = 'button';
     save.className = 'apbs-badge apbs-save';
-    list.append(save);
+    const hide = document.createElement('button');
+    hide.type = 'button';
+    hide.className = 'apbs-badge apbs-hide';
+    list.append(save, hide);
     box.append(logo, list);
     return box;
   }
@@ -882,17 +1035,59 @@
     }
   }
 
-  // Clicks on a "watch later" button. Listened to on `window` in the capture phase, so the
-  // click is stopped before it reaches the card's link or Prime Video's own handlers.
-  function onWatchLaterClick(event) {
-    const button = event.target instanceof Element ? event.target.closest('.apbs-save') : null;
+  // Shows "Hide", or "Unhide" where a hidden title stays on the page, covered (the top banner
+  // and the title's own page). Only touches the DOM when something changed.
+  function setHideButton(box, id) {
+    const button = box.querySelector('.apbs-hide');
+    const hidden = isHidden(id);
+    const label = hidden ? texts.unhide : texts.hide;
+    const text = hidden ? texts.unhideTitle : texts.hideTitle;
+    if (button.textContent !== label) {
+      button.textContent = label;
+    }
+    if (button.dataset.id !== id) {
+      button.dataset.id = id;
+    }
+    if (button.getAttribute('aria-pressed') !== String(hidden)) {
+      button.setAttribute('aria-pressed', String(hidden));
+    }
+    if (button.title !== text) {
+      button.title = text;
+      button.setAttribute('aria-label', text);
+    }
+  }
+
+  // Clicks on a "watch later" or "hide" button. Listened to on `window` in the capture phase,
+  // so the click is stopped before it reaches the card's link or Prime Video's own handlers.
+  function onBadgeButtonClick(event) {
+    const button = event.target instanceof Element ? event.target.closest('.apbs-save, .apbs-hide') : null;
     if (!button) {
       return;
     }
     event.preventDefault();
     event.stopPropagation();
     const root = button.closest(`${ALL_CARDS_SELECTOR}, ${DETAIL_MAIN_SELECTOR}`);
-    toggleWatchLater(button.dataset.id, root ? getTitleName(root) : '');
+    const title = root ? getTitleName(root) : '';
+    if (button.classList.contains('apbs-hide')) {
+      toggleHidden(button.dataset.id, title);
+    } else {
+      toggleWatchLater(button.dataset.id, title);
+    }
+  }
+
+  // Covers a title the user hid where it cannot disappear (the top banner, the title's own
+  // page): an attribute, not a class, in case Prime Video rewrites the element's class.
+  // The cover itself is drawn by content.css.
+  function setCovered(element, covered) {
+    if (!element) {
+      return;
+    }
+    if (element.hasAttribute('data-apbs-covered') !== covered) {
+      element.toggleAttribute('data-apbs-covered', covered);
+    }
+    if (covered && element.getAttribute('data-apbs-covered-text') !== texts.covered) {
+      element.setAttribute('data-apbs-covered-text', texts.covered);
+    }
   }
 
   // In the simplified view (`apbs-compact`) the badges show only an icon on their colour;
@@ -976,12 +1171,24 @@
     const watchLaterList = document.createElement('ul');
     watchLaterSection.append(watchLaterTitle, watchLaterList);
     watchLaterChanged = true;
+    // The hidden titles: only their count here, the list itself is in a window (it may hold hundreds).
+    const hiddenRow = document.createElement('div');
+    hiddenRow.className = 'apbs-hidden-row apbs-separated';
+    const hiddenCount = document.createElement('span');
+    const manage = document.createElement('button');
+    manage.type = 'button';
+    manage.className = 'apbs-button';
+    manage.textContent = texts.manage;
+    manage.addEventListener('click', openHiddenDialog);
+    hiddenRow.append(hiddenCount, manage);
+    hiddenChanged = true;
     // The least important settings go last, below a separator line, with the icons' legend under them.
     const legend = createLegend(code);
     panel.append(
       warning,
       status,
       watchLaterSection,
+      hiddenRow,
       createDimCheckbox(),
       createWatchLaterCheckbox(watchLaterSection),
       createCompactCheckbox(legend),
@@ -1021,6 +1228,98 @@
       remove.setAttribute('aria-label', texts.watchLaterRemove);
       remove.addEventListener('click', () => toggleWatchLater(item.id, item.title));
       row.append(link, remove);
+      list.append(row);
+    }
+  }
+
+  // Redraws the hidden titles' count in the panel and, if it is open, the list in the
+  // hidden titles window, only after the list changed (see hiddenChanged).
+  function renderHiddenTitles() {
+    if (!hiddenChanged) {
+      return;
+    }
+    hiddenChanged = false;
+    const count = panel && panel.querySelector('.apbs-hidden-row > span');
+    if (count) {
+      count.textContent = `${texts.hiddenList}: ${hiddenTitles.length}`;
+    }
+    renderHiddenDialogList();
+  }
+
+  // The window with every hidden title: a search field and a scrolling list, newest first,
+  // each title a link to its page with a "×" that shows it again. A native modal <dialog>,
+  // so it sits above the page and closes with Escape; a click outside it closes it too.
+  // It is removed from the page when closed.
+  function openHiddenDialog() {
+    if (document.querySelector('.apbs-dialog')) {
+      return;
+    }
+    const dialog = document.createElement('dialog');
+    dialog.className = 'apbs-dialog';
+    const content = document.createElement('div');
+    content.className = 'apbs-dialog-content';
+    const header = document.createElement('div');
+    header.className = 'apbs-title';
+    const heading = document.createElement('span');
+    heading.className = 'apbs-dialog-heading';
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'apbs-remove apbs-dialog-close';
+    close.title = texts.close;
+    close.setAttribute('aria-label', texts.close);
+    close.addEventListener('click', () => dialog.close());
+    header.append(heading, close);
+    const search = document.createElement('input');
+    search.type = 'search';
+    search.placeholder = texts.search;
+    search.setAttribute('aria-label', texts.search);
+    search.addEventListener('input', renderHiddenDialogList);
+    const list = document.createElement('ul');
+    content.append(header, search, list);
+    dialog.append(content);
+    // The content fills the dialog, so a click on the dialog itself is on the backdrop.
+    dialog.addEventListener('click', (event) => {
+      if (event.target === dialog) {
+        dialog.close();
+      }
+    });
+    dialog.addEventListener('close', () => dialog.remove());
+    document.body.append(dialog);
+    renderHiddenDialogList();
+    dialog.showModal();
+    search.focus();
+  }
+
+  // Fills the hidden titles window (if open) with the titles that match its search field.
+  function renderHiddenDialogList() {
+    const dialog = document.querySelector('.apbs-dialog');
+    if (!dialog) {
+      return;
+    }
+    dialog.querySelector('.apbs-dialog-heading').textContent = `${texts.hiddenList} (${hiddenTitles.length})`;
+    const query = dialog.querySelector('input').value.trim().toLowerCase();
+    const matches = hiddenTitles.filter((item) => (item.title || item.id).toLowerCase().includes(query));
+    const list = dialog.querySelector('ul');
+    list.replaceChildren();
+    if (matches.length === 0) {
+      const empty = document.createElement('li');
+      empty.className = 'apbs-dialog-empty';
+      empty.textContent = hiddenTitles.length === 0 ? texts.hiddenEmpty : texts.noMatches;
+      list.append(empty);
+    }
+    for (const item of matches) {
+      const row = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = `/detail/${encodeURIComponent(item.id)}`;
+      link.textContent = item.title || item.id;
+      link.title = link.textContent;
+      const restore = document.createElement('button');
+      restore.type = 'button';
+      restore.className = 'apbs-remove';
+      restore.title = texts.unhideTitle;
+      restore.setAttribute('aria-label', texts.unhideTitle);
+      restore.addEventListener('click', () => toggleHidden(item.id, item.title));
+      row.append(link, restore);
       list.append(row);
     }
   }
@@ -1190,6 +1489,46 @@
 
   // ---------- main loop ----------
 
+  // ---------- top banner rotation ----------
+
+  // The top banner shows one title at a time, all of them stacked in a frame of fixed height,
+  // so a hidden title cannot shrink there. Instead, when a hidden title becomes the active one,
+  // the banner's own arrow is clicked to move on: backwards if the banner just moved backwards
+  // (the user's "previous" arrow), otherwise forwards. Prime Video's automatic rotation keeps
+  // going after such a click. If every title is hidden, it stops after HERO_MAX_SKIPS and the
+  // hidden title stays covered.
+  function skipHiddenHeroTitle() {
+    const wrapper = document.querySelector('[data-testid="top-hero-wrapper"]');
+    const active = wrapper && wrapper.querySelector('[data-testid="fading-rotating-carousel"] > li[data-active="true"]');
+    const card = active && active.querySelector(HERO_KIND.selector);
+    if (!card) {
+      return;
+    }
+    const index = Number(active.getAttribute('data-index'));
+    const previousIndex = heroIndex;
+    heroIndex = index;
+    const id = getDetailId(card, HERO_KIND);
+    if (!id || !isHidden(id)) {
+      heroSkippedFrom = null;
+      heroSkips = 0;
+      return;
+    }
+    // Already skipped from this title; the banner is still fading to the next one.
+    const key = `${index}:${id}`;
+    if (key === heroSkippedFrom || heroSkips >= HERO_MAX_SKIPS) {
+      return;
+    }
+    // Backwards: one step down, or from the first title to the last one.
+    const backwards = previousIndex !== null && (index === previousIndex - 1 || (previousIndex === 0 && index > 1));
+    const arrow = wrapper.querySelector(`:scope > div:${backwards ? 'first' : 'last'}-child button`);
+    if (!arrow) {
+      return;
+    }
+    heroSkippedFrom = key;
+    heroSkips++;
+    arrow.click();
+  }
+
   // ---------- detail page banner ----------
 
   // The detail id when the page is a title's detail page, otherwise null.
@@ -1224,6 +1563,8 @@
     const box = banner.querySelector('.apbs-badges');
     setBadges(box, entitled, getLanguageStatus(id, 'tracks'), getLanguageStatus(id, 'subtitles'));
     setWatchLaterButton(box, id);
+    setHideButton(box, id);
+    setCovered(main.querySelector(DETAIL_COVER_SELECTOR), isHidden(id));
   }
 
   function update() {
@@ -1245,8 +1586,10 @@
     }
     ensurePanel();
     cards.forEach(processCard);
+    skipHiddenHeroTitle();
     updatePanelStatus();
     renderWatchLater();
+    renderHiddenTitles();
   }
 
   function scheduleUpdate() {
@@ -1257,12 +1600,18 @@
   }
 
   async function start() {
-    await Promise.all([loadCache(), loadWatchLater()]);
+    await Promise.all([loadCache(), loadLists()]);
     chrome.storage.onChanged.addListener(onStorageChanged);
-    window.addEventListener('click', onWatchLaterClick, true);
+    window.addEventListener('click', onBadgeButtonClick, true);
     // Prime Video is a single-page app: cards load lazily and get re-rendered,
     // so re-apply badges whenever the DOM changes.
-    new MutationObserver(scheduleUpdate).observe(document.body, { childList: true, subtree: true });
+    // `data-active` marks the top banner's current title (see skipHiddenHeroTitle).
+    new MutationObserver(scheduleUpdate).observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-active'],
+    });
     scheduleUpdate();
   }
 

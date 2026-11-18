@@ -40,7 +40,7 @@ Pick **EN, PL, DE, ES, FR, IT or CS**. It sets the language looked for in audio 
 
 ### Icons-only view
 
-Prefer a calmer page? The **"show icons only"** switch turns every badge into a small coloured square: a padlock for the subscription, a speaker for audio, "CC" for subtitles, and a bookmark (filled once saved) for watch later. Green means yes, red means no, grey means not known yet.
+Prefer a calmer page? The **"show icons only"** switch turns every badge into a small coloured square: a padlock for the subscription, a speaker for audio, "CC" for subtitles, a bookmark (filled once saved) for watch later and a crossed-out eye for hide. Green means yes, red means no, grey means not known yet.
 
 ![A card in the normal view, with the "+ Watch later" button below the badges](images/card-full.png) ![The same card in the icons-only view](images/card-icons.png)
 
@@ -56,9 +56,21 @@ A **"+ Watch later"** button below the badges (on cards, posters, the top banner
 
 This feature is simple by design. Prime Video already has its own watchlist; this is just a very quick way to remember a title for a short while. The list is kept locally in your browser, not in your Prime Video account, so it does not show up on another computer or in another browser. Don't need it? Untick **"show the watch later list"** in the panel to hide the list and the buttons; your saved titles stay.
 
-![The panel with two titles on the watch later list](images/watch-later-panel.png)
+![The panel with two titles on the watch later list and, below it, the hidden titles count with the "Manage" button](images/watch-later-panel.png)
 
-Your settings (filters, language, grey out, watch later on or off, simplified view, collapsed panel) and the watch later list are remembered.
+### Hide titles
+
+Seen it, or just not interested? The **"Hide"** button after "watch later" (a crossed-out eye in the icons-only view) hides the title for good: its cards and posters disappear from every Prime Video page. The rotating banner at the top skips it: when its turn comes, the banner moves straight on to the next title (it may flash for a moment, blurred). On the title's own page the large preview is blurred, darkened and shrunk to a low strip with a "Hidden title" label; there the button reads **"Unhide"** (an open eye) and brings the title back.
+
+![A card in the icons-only view; the crossed-out eye at the end hides the title](images/hide-button.png)
+
+![A hidden title's own page: the preview shrunk to a blurred strip with the "Hidden title" label and the open eye that brings it back](images/hidden-detail.png)
+
+The panel shows only how many titles you have hidden. **"Manage"** opens a window with all of them, newest first, and a search field, handy once the list grows to hundreds: click a title to open its page, or "×" to show it again. Like the watch later list, it is kept locally in your browser.
+
+![The window with the hidden titles and its search field](images/hidden-dialog.png)
+
+Your settings (filters, language, grey out, watch later on or off, simplified view, collapsed panel), the watch later list and the hidden titles are remembered.
 
 ## Installation
 

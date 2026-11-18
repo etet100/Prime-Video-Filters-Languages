@@ -14,6 +14,9 @@
   /* The "watch later" button in the simplified view: a bookmark, outlined when the title is not saved, filled when it is. */
   --apbs-icon-save: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2zm0 15l-5-2.18L7 18V5h10v13z'/%3E%3C/svg%3E");
   --apbs-icon-saved: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17 3H7c-1.1 0-1.99.9-1.99 2L5 21l7-3 7 3V5c0-1.1-.9-2-2-2z'/%3E%3C/svg%3E");
+  /* The "hide" button in the simplified view: a crossed-out eye, or an open eye where a hidden title is covered. */
+  --apbs-icon-hide: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z'/%3E%3C/svg%3E");
+  --apbs-icon-unhide: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z'/%3E%3C/svg%3E");
   /* The "×" that removes a title from the panel's watch later list. */
   --apbs-icon-remove: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z'/%3E%3C/svg%3E");
 }
@@ -123,6 +126,35 @@
   padding: 7px 15px;
 }
 
+/* The "hide" button, the fifth badge: outlined like the "watch later" button. On a card a click
+   makes the card disappear, so it only ever shows "Hide"; where a hidden title stays on the page,
+   covered (top banner, title page), it shows "Unhide", filled grey. */
+.apbs-badge.apbs-hide {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 1px 6px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  pointer-events: auto;
+  --apbs-badge-icon: var(--apbs-icon-hide);
+}
+
+.apbs-badge.apbs-hide[aria-pressed="true"] {
+  border-color: #5a6675;
+  background: #5a6675;
+  --apbs-badge-icon: var(--apbs-icon-unhide);
+}
+
+.apbs-badge.apbs-hide:hover {
+  border-color: #fff;
+}
+
+.apbs-large .apbs-badge.apbs-hide {
+  padding: 7px 15px;
+}
+
 /* Hidden while the "watch later" feature is turned off in the panel. */
 .apbs-save[hidden],
 .apbs-watch-later[hidden] {
@@ -154,6 +186,40 @@
 [data-apbs-dimmed]:hover :has(.apbs-badges) > :not(:has(.apbs-badges), .apbs-badges) {
   filter: none;
   opacity: 1;
+}
+
+/* A title the user hid, where it cannot disappear (the top banner, the title's own page): every
+   part that does not hold the badges (image, title art, synopsis, buttons) is blurred, darkened
+   and cannot be clicked, the same way as greyed out cards, so the badges and their "Unhide"
+   button stay sharp. A label sits in the middle. */
+[data-apbs-covered] > :not(:has(.apbs-badges), .apbs-badges),
+[data-apbs-covered] :has(.apbs-badges) > :not(:has(.apbs-badges), .apbs-badges) {
+  filter: blur(12px) grayscale(1) brightness(0.35);
+  pointer-events: none;
+}
+
+/* The label is placed over the covered element: the top banner card is absolutely positioned
+   already, the title page's preview (static) is made relative for it. That preview is also
+   shrunk to a low strip, so the episodes and details move up. (The top banner cannot shrink:
+   its cards are stacked on top of each other.) */
+.DVWebNode-detail-atf-wrapper[data-apbs-covered] {
+  position: relative;
+  height: 200px;
+  overflow: hidden;
+}
+
+[data-apbs-covered]::after {
+  content: attr(data-apbs-covered-text);
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font: 700 32px/1.2 system-ui, sans-serif;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
 }
 
 /* With a filter on, a card whose check has not finished yet is dimmed until it is either hidden or shown. */
@@ -352,6 +418,111 @@ body:has([id^="dv-web-player"].dv-player-fullscreen) .apbs-panel {
 }
 
 .apbs-watch-later-empty {
+  color: #aab7c4;
+  font-size: 12px;
+}
+
+/* The panel's hidden titles row: the count and a button that opens the hidden titles window. */
+.apbs-panel .apbs-hidden-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.apbs-hidden-row > span {
+  flex: 1;
+}
+
+.apbs-button {
+  flex: none;
+  padding: 2px 8px;
+  border: 1px solid #3d4c5c;
+  border-radius: 4px;
+  background: #2a3745;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.apbs-button:hover {
+  border-color: #00a8e1;
+}
+
+/* The hidden titles window, in the middle of the screen above the page (a modal <dialog>):
+   a header with the count and a close button, a search field and a scrolling list. */
+.apbs-dialog {
+  width: min(480px, calc(100vw - 32px));
+  max-height: 80vh;
+  padding: 0;
+  border: 1px solid #00a8e1;
+  border-radius: 8px;
+  background: #1b2530;
+  color: #fff;
+  font: 13px/1.4 system-ui, sans-serif;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.apbs-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.6);
+}
+
+.apbs-dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 80vh;
+  box-sizing: border-box;
+  padding: 12px 14px;
+}
+
+.apbs-dialog-close {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+}
+
+.apbs-dialog input {
+  font: inherit;
+  color: #fff;
+  background: #2a3745;
+  border: 1px solid #3d4c5c;
+  border-radius: 4px;
+  padding: 4px 6px;
+}
+
+.apbs-dialog ul {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.apbs-dialog li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 0;
+}
+
+.apbs-dialog a {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #fff;
+  text-decoration: none;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.apbs-dialog a:hover {
+  color: #00a8e1;
+  text-decoration: underline;
+}
+
+.apbs-dialog-empty {
   color: #aab7c4;
   font-size: 12px;
 }
